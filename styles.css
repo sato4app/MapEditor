@@ -1,0 +1,595 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#map {
+    height: 100vh;
+    width: 100vw;
+}
+
+.control-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+    min-width: 240px;
+}
+
+.control-section {
+    margin-bottom: 15px;
+}
+
+.control-section label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.control-section input[type="radio"] {
+    margin-right: 8px;
+}
+
+.selected {
+    color: #007bff;
+    font-weight: bold;
+}
+
+.geojson-panel {
+    border: 2px solid #666;
+    border-radius: 8px;
+    padding: 15px;
+    background: #f8f9fa;
+}
+
+.geojson-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.geojson-controls {
+    display: flex;
+    gap: 35px;
+}
+
+.geojson-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.geojson-right {
+    flex: 1;
+}
+
+.stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.stats-row span:first-child {
+    text-align: left;
+    min-width: 60px;
+}
+
+.stats-input {
+    width: 32px;
+    padding: 2px 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    text-align: right;
+    background-color: #f8f9fa;
+    margin-left: 0px;
+    margin-right: 10px;
+}
+
+.stats-row span:last-child {
+    min-width: 20px;
+}
+
+button {
+    padding: 4px 8px;
+    border: 2px solid #666;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+button:hover {
+    background: #f0f0f0;
+}
+
+#fileInput {
+    display: none;
+}
+
+/* ルート編集パネル */
+.route-panel {
+    border: 2px solid #999;
+    border-radius: 8px;
+    padding: 20px;
+    background: white;
+}
+
+.route-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.route-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.route-label {
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.route-dropdown {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="%23333" stroke-width="2" stroke-linecap="round"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 28px;
+    min-width: 50px;
+}
+
+.route-dropdown:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.route-dropdown-short {
+    width: 5em;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="%23333" stroke-width="2" stroke-linecap="round"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 28px;
+}
+
+.route-dropdown-short:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.route-dropdown-long {
+    width: 6em;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="%23333" stroke-width="2" stroke-linecap="round"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 28px;
+}
+
+.route-dropdown-long:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.reset-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 18px;
+    border: 2px solid #666;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.reset-btn:hover {
+    background: #f0f0f0;
+    border-color: #333;
+}
+
+.reset-btn:active {
+    transform: scale(0.95);
+}
+
+.route-separator {
+    font-size: 12px;
+}
+
+.route-path {
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.route-dropdown-full {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="%23333" stroke-width="2" stroke-linecap="round"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+.route-dropdown-full:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.route-buttons {
+    border: 2px solid #999;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.route-button-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.route-button-row:last-child {
+    margin-bottom: 0;
+}
+
+.route-btn {
+    flex: 1;
+    padding: 6px 16px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.route-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.route-btn:active {
+    transform: translateY(1px);
+}
+
+.route-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.route-btn.active:hover {
+    background-color: #0056b3;
+}
+
+.route-btn-clear {
+    flex: none;
+}
+
+#addMoveRouteBtn {
+    flex: none;
+    width: 96px;
+}
+
+#deleteRouteBtn {
+    flex: none;
+    width: 60px;
+}
+
+
+.file-input-label {
+    display: inline-block;
+    width: 76px;
+    padding: 8px 0;
+    border: 2px solid #666;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: center;
+}
+
+.file-input-label:hover {
+    background: #f0f0f0;
+}
+
+#exportBtn {
+    width: 80px;
+    padding: 8px 0;
+}
+
+/* カスタムズームコントロールのスタイル */
+.leaflet-control-custom {
+    background: white;
+    border: 2px solid rgba(0,0,0,0.2);
+    border-radius: 4px;
+    margin-bottom: 10px !important;
+}
+
+.leaflet-control-custom a {
+    background: white;
+    color: #333;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: bold;
+    display: block;
+    border: none;
+}
+
+.leaflet-control-custom a:hover {
+    background: #f4f4f4;
+    color: #111;
+}
+
+.leaflet-control-custom a:first-child {
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    border-radius: 2px 2px 0 0;
+}
+
+.leaflet-control-custom a:last-child {
+    border-radius: 0 0 2px 2px;
+}
+
+/* トーストメッセージのスタイル */
+.toast-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #d1ecf1;
+    color: #0c5460;
+    padding: 12px 24px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    font-size: 14px;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease;
+}
+
+.toast-message.warning {
+    background: #ffc107;
+    color: #333;
+}
+
+.toast-message.error {
+    background: #dc3545;
+}
+
+.toast-message.fade-out {
+    animation: fadeOut 0.3s ease;
+    opacity: 0;
+}
+
+@keyframes fadeIn {
+    from {
+        transform: translate(-50%, -50%) scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+/* スポット編集パネル */
+.spot-panel {
+    border: 2px solid #999;
+    border-radius: 8px;
+    padding: 20px;
+    background: white;
+}
+
+.spot-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 20px;
+}
+
+.spot-count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.spot-label {
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.spot-count-input {
+    width: 30px;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+    background-color: #f8f9fa;
+}
+
+.spot-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.spot-dropdown {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="%23333" stroke-width="2" stroke-linecap="round"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+.spot-dropdown:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.spot-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.spot-name-input {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.spot-category {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.spot-category-dropdown {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="%23333" stroke-width="2" stroke-linecap="round"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+.spot-category-dropdown:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.spot-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.spot-btn {
+    padding: 6px 16px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.spot-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.spot-btn:active {
+    transform: translateY(1px);
+}
+
+.spot-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.spot-btn.active:hover {
+    background-color: #0056b3;
+}
+
+#addMoveSpotBtn {
+    flex: none;
+}
+
+#deleteSpotBtn {
+    flex: none;
+}
+
+/* Leafletポップアップのスタイル */
+.leaflet-popup-content-wrapper {
+    padding: 4px;
+    font-size: 13px;
+    min-width: 30px;
+    max-width: 180px;
+}
+
+.leaflet-popup-content {
+    margin: 6px 8px;
+    line-height: 1.4;
+    min-height: auto;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}

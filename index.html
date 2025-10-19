@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ルート・スポットを位置編集し、GeoJSONファイルに出力</title>
+    <link rel="icon" href="data:image/svg+xml,
+            <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗾</text></svg>" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="control-panel">
+        <div class="control-section">
+            <label>
+                <input type="radio" name="mode" value="geojson" checked>
+                <span class="selected">ファイルの入出力(GeoJSON)</span>
+            </label>
+            <label>
+                <input type="radio" name="mode" value="route">
+                <span>ルートの位置編集</span>
+            </label>
+            <label>
+                <input type="radio" name="mode" value="spot">
+                <span>スポットの位置編集</span>
+            </label>
+        </div>
+        
+        <div class="geojson-panel" id="geojsonPanel">
+            <div class="geojson-title">GeoJSONファイルの入出力</div>
+
+            <div class="geojson-controls">
+                <div class="geojson-left">
+                    <label for="fileInput" class="file-input-label">読み込み</label>
+                    <input type="file" id="fileInput" accept=".geojson" />
+                    <button id="exportBtn">出力</button>
+                </div>
+
+                <div class="geojson-right">
+                    <div class="stats-row">
+                        <span>ファイル</span>
+                        <input type="text" class="stats-input" id="fileCount" readonly>
+                    </div>
+                    <div class="stats-row">
+                        <span>ポイント</span>
+                        <input type="text" class="stats-input" id="pointCount" readonly>
+                        <span>点</span>
+                    </div>
+                    <div class="stats-row">
+                        <span>ルート</span>
+                        <input type="text" class="stats-input" id="routeCount" readonly>
+                        <span>本</span>
+                    </div>
+                    <div class="stats-row">
+                        <span>スポット</span>
+                        <input type="text" class="stats-input" id="spotCount" readonly>
+                        <span>個</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="route-panel" id="routePanel" style="display: none;">
+            <div class="route-title">ルート詳細情報</div>
+
+            <div class="route-selector">
+                <span class="route-label">絞り込み</span>
+                <select class="route-dropdown-short" id="routeStart">
+                    <option value="">－</option>
+                </select>
+                <select class="route-dropdown-long" id="routeEnd">
+                    <option value="">選択</option>
+                </select>
+                <button class="reset-btn" id="resetDropdownBtn" title="ドロップダウンをリセット">↻</button>
+            </div>
+
+            <div class="route-path">
+                <span class="route-label">ルート</span>
+                <select class="route-dropdown-full" id="routePath">
+                    <option value="">開始 ～ 終了ポイント</option>
+                </select>
+            </div>
+
+            <div class="route-buttons">
+                <div class="route-button-row">
+                    <span class="route-label">中間点</span>
+                    <button class="route-btn" id="addMoveRouteBtn">追加・移動</button>
+                    <button class="route-btn" id="deleteRouteBtn">削除</button>
+                </div>
+                <div class="route-button-row">
+                    <span class="route-label">ルート</span>
+                    <button class="route-btn route-btn-clear" id="clearRouteBtn">クリア</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="spot-panel" id="spotPanel" style="display: none;">
+            <div class="spot-title">スポット詳細情報</div>
+
+            <div class="spot-count">
+                <span class="spot-label">スポット数</span>
+                <input type="text" class="spot-count-input" id="spotCountDisplay" readonly>
+            </div>
+
+            <div class="spot-selector">
+                <span class="spot-label">スポット</span>
+                <select class="spot-dropdown" id="spotSelect">
+                    <option value="">選択してください</option>
+                </select>
+            </div>
+
+            <div class="spot-name">
+                <span class="spot-label">選択スポット</span>
+                <input type="text" class="spot-name-input" id="selectedSpotName">
+            </div>
+
+            <div class="spot-category">
+                <span class="spot-label">スポット区分</span>
+                <select class="spot-category-dropdown" id="spotCategory">
+                    <option value="">選択してください</option>
+                </select>
+            </div>
+
+            <div class="spot-buttons">
+                <button class="spot-btn" id="addMoveSpotBtn">追加・移動</button>
+                <button class="spot-btn" id="deleteSpotBtn">削除</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
