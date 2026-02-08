@@ -20,7 +20,7 @@ setupFileExport();
 
 // モード切り替え処理
 document.querySelectorAll('input[name="mode"]').forEach(radio => {
-    radio.addEventListener('change', function() {
+    radio.addEventListener('change', function () {
         // 選択状態の表示更新
         document.querySelectorAll('.control-section label span').forEach(span => {
             span.classList.remove('selected');
@@ -47,19 +47,28 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
         const geojsonPanel = document.getElementById('geojsonPanel');
         const routePanel = document.getElementById('routePanel');
         const spotPanel = document.getElementById('spotPanel');
+        const areaPanel = document.getElementById('areaPanel');
 
         if (this.value === MODES.GEOJSON) {
             geojsonPanel.style.display = 'block';
             routePanel.style.display = 'none';
             spotPanel.style.display = 'none';
+            if (areaPanel) areaPanel.style.display = 'none';
         } else if (this.value === MODES.ROUTE) {
             geojsonPanel.style.display = 'none';
             routePanel.style.display = 'block';
             spotPanel.style.display = 'none';
+            if (areaPanel) areaPanel.style.display = 'none';
         } else if (this.value === MODES.SPOT) {
             geojsonPanel.style.display = 'none';
             routePanel.style.display = 'none';
             spotPanel.style.display = 'block';
+            if (areaPanel) areaPanel.style.display = 'none';
+        } else if (this.value === MODES.AREA) {
+            geojsonPanel.style.display = 'none';
+            routePanel.style.display = 'none';
+            spotPanel.style.display = 'none';
+            if (areaPanel) areaPanel.style.display = 'block';
         }
     });
 });
@@ -69,16 +78,16 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
 // ========================================
 
 // 絞り込みドロップダウンの変更イベントリスナー
-document.getElementById('routeStart').addEventListener('change', function() {
+document.getElementById('routeStart').addEventListener('change', function () {
     RouteEditor.updateRouteLongDropdown(getLoadedData());
 });
 
-document.getElementById('routeEnd').addEventListener('change', function() {
+document.getElementById('routeEnd').addEventListener('change', function () {
     RouteEditor.updateRoutePathDropdown(getLoadedData());
 });
 
 // route-dropdown-fullの変更イベントリスナー（ルートハイライト）
-document.getElementById('routePath').addEventListener('change', function() {
+document.getElementById('routePath').addEventListener('change', function () {
     const selectedRouteId = this.value;
 
     // モードが有効な場合は一旦すべて解除
@@ -96,7 +105,7 @@ document.getElementById('routePath').addEventListener('change', function() {
 });
 
 // 追加・移動ボタン
-document.getElementById('addMoveRouteBtn').addEventListener('click', function() {
+document.getElementById('addMoveRouteBtn').addEventListener('click', function () {
     const path = document.getElementById('routePath').value;
 
     if (!path) {
@@ -129,7 +138,7 @@ document.getElementById('addMoveRouteBtn').addEventListener('click', function() 
     showMessage('地図上をクリックして中間点を追加できます。\n中間点をクリックして、ドラッグして移動できます。\nボタンをもう一度クリックで解除', 'success');
 
     // 地図クリックイベントを設定（追加用）
-    const handler = function(e) {
+    const handler = function (e) {
         if (!RouteEditor.state.isAddMoveMode) return;
 
         // クリック位置に中間点を追加
@@ -149,7 +158,7 @@ document.getElementById('addMoveRouteBtn').addEventListener('click', function() 
 });
 
 // 削除ボタン
-document.getElementById('deleteRouteBtn').addEventListener('click', function() {
+document.getElementById('deleteRouteBtn').addEventListener('click', function () {
     const path = document.getElementById('routePath').value;
 
     if (!path) {
@@ -180,7 +189,7 @@ document.getElementById('deleteRouteBtn').addEventListener('click', function() {
 });
 
 // クリアボタン
-document.getElementById('clearRouteBtn').addEventListener('click', async function() {
+document.getElementById('clearRouteBtn').addEventListener('click', async function () {
     const path = document.getElementById('routePath').value;
 
     if (!path) {
@@ -273,7 +282,7 @@ document.getElementById('clearRouteBtn').addEventListener('click', async functio
 });
 
 // リセットボタン
-document.getElementById('resetDropdownBtn').addEventListener('click', function() {
+document.getElementById('resetDropdownBtn').addEventListener('click', function () {
     // ハイライトをリセット
     RouteEditor.resetRouteHighlight(markerMap, map);
 
@@ -291,13 +300,13 @@ document.getElementById('resetDropdownBtn').addEventListener('click', function()
 SpotEditor.initSpotCategoryDropdown();
 
 // スポットドロップダウンの変更イベントリスナー
-document.getElementById('spotSelect').addEventListener('change', function() {
+document.getElementById('spotSelect').addEventListener('change', function () {
     const selectedIndex = this.value;
     SpotEditor.highlightSpot(selectedIndex, spotMarkerMap);
 });
 
 // テキストボックスのフォーカス離脱時の処理
-document.getElementById('selectedSpotName').addEventListener('blur', function() {
+document.getElementById('selectedSpotName').addEventListener('blur', function () {
     const newName = this.value.trim();
 
     if (!SpotEditor.selectedSpotFeature || !newName) return;
@@ -326,7 +335,7 @@ document.getElementById('selectedSpotName').addEventListener('blur', function() 
 });
 
 // スポット区分ドロップダウンの変更イベントリスナー
-document.getElementById('spotCategory').addEventListener('change', function() {
+document.getElementById('spotCategory').addEventListener('change', function () {
     const newCategory = this.value;
 
     if (!SpotEditor.selectedSpotFeature) return;
@@ -340,7 +349,7 @@ document.getElementById('spotCategory').addEventListener('change', function() {
 });
 
 // 追加・移動ボタン
-document.getElementById('addMoveSpotBtn').addEventListener('click', function() {
+document.getElementById('addMoveSpotBtn').addEventListener('click', function () {
     // 既に追加・移動モードの場合は解除
     if (SpotEditor.isAddMoveSpotMode) {
         SpotEditor.exitAddMoveSpotMode(map);
@@ -372,7 +381,7 @@ document.getElementById('addMoveSpotBtn').addEventListener('click', function() {
     map.getContainer().style.cursor = 'crosshair';
 
     // 地図クリックイベントを設定（スポット追加用）
-    const spotHandler = function(e) {
+    const spotHandler = function (e) {
         if (!SpotEditor.isAddMoveSpotMode) return;
 
         // クリック位置に新しいスポットを追加
@@ -386,7 +395,7 @@ document.getElementById('addMoveSpotBtn').addEventListener('click', function() {
 });
 
 // 削除ボタン
-document.getElementById('deleteSpotBtn').addEventListener('click', function() {
+document.getElementById('deleteSpotBtn').addEventListener('click', function () {
     // スポットが選択されていない場合
     if (!SpotEditor.selectedSpotFeature || !SpotEditor.selectedSpotMarker) {
         showMessage('削除するスポットを選択してください', 'warning');

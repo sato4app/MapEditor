@@ -71,7 +71,8 @@ export const DEFAULTS = {
 export const MODES = {
     GEOJSON: 'geojson',
     ROUTE: 'route',
-    SPOT: 'spot'
+    SPOT: 'spot',
+    AREA: 'area'
 };
 
 // スポット区分のリスト
