@@ -68,28 +68,8 @@ body {
     width: 48%;
 }
 
-.stats-row-vertical {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    margin-bottom: 8px;
-    font-size: 12px;
-}
-
-.stats-row-vertical span {
-    margin-bottom: 4px;
-}
-
-.stats-input-wide {
-    width: 60px;
-    margin-left: 0;
-    text-align: right;
-    margin-right: 5px;
-}
-
-.stats-value-row {
-    display: flex;
-    align-items: center;
+.stats-col-left .stats-row span:first-child {
+    min-width: 90px;
 }
 
 .io-controls {
