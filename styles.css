@@ -58,6 +58,16 @@ body {
     text-align: center;
 }
 
+.stats-grid {
+    display: flex;
+    justify-content: space-between;
+}
+
+.stats-col-left,
+.stats-col-right {
+    width: 48%;
+}
+
 .io-controls {
     display: flex;
     flex-direction: column;

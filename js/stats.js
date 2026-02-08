@@ -76,6 +76,11 @@ export function updateStats(geoJsonData) {
     if (areaCountDisplay) {
         areaCountDisplay.value = areaCount;
     }
+
+    const statsAreaCount = document.getElementById('statsAreaCount');
+    if (statsAreaCount) {
+        statsAreaCount.value = areaCount;
+    }
 }
 
 // 日付文字列生成関数（yyyymmdd形式）
