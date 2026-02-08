@@ -4,8 +4,9 @@
 export function updateStats(geoJsonData) {
     let pointCount = 0;      // ポイントGPS
     let waypointCount = 0;   // ルート中間点
-    let spotCount = 0;       // スポット
-    let polygonCount = 0;    // ポリゴン
+    let spotCount = 0;       // スポット (Point)
+    let areaCount = 0;       // エリア (Polygon/MultiPolygon, type!=spot)
+    let spotPolygonCount = 0;// スポット (Polygon/MultiPolygon, type==spot)
     const waypointRouteIdSet = new Set(); // ルートID収集（中間点から補完）
 
     // 再帰的にLineString/MultiLineStringを数える
@@ -42,14 +43,21 @@ export function updateStats(geoJsonData) {
                     if (rid) waypointRouteIdSet.add(rid);
                 } else if (featureType === 'spot') {
                     spotCount++;
+                } else if (featureType === 'area') {
+                    // Point area? Unusual but possible.
+                    areaCount++;
                 } else {
                     // typeが指定されていない場合はポイントとしてカウント
                     pointCount++;
                 }
             }
-            // Polygonはスポットまたはポリゴンとしてカウント
+            // Polygonはスポットまたはエリアとしてカウント
             else if (geometryType === 'Polygon' || geometryType === 'MultiPolygon') {
-                polygonCount++;
+                if (featureType === 'spot' || featureType === 'スポット') {
+                    spotPolygonCount++;
+                } else {
+                    areaCount++;
+                }
             }
         });
     }
@@ -61,8 +69,13 @@ export function updateStats(geoJsonData) {
     document.getElementById('pointCount').value = pointCount;
     // ルートカウントはLineString/MultiLineStringの本数。無ければ中間点のroute_idユニーク数
     document.getElementById('routeCount').value = routeCount;
-    // スポットカウントはスポットポイントとポリゴンの合計
-    document.getElementById('spotCount').value = spotCount + polygonCount;
+    // スポットカウントはスポットポイントとポリゴン(spot)の合計
+    document.getElementById('spotCount').value = spotCount + spotPolygonCount;
+
+    const areaCountDisplay = document.getElementById('areaCountDisplay');
+    if (areaCountDisplay) {
+        areaCountDisplay.value = areaCount;
+    }
 }
 
 // 日付文字列生成関数（yyyymmdd形式）

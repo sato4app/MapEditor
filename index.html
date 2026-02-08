@@ -143,7 +143,29 @@
         </div>
 
         <div class="area-panel" id="areaPanel" style="display: none;">
-            <div class="area-title">エリア詳細情報</div>
+            <div class="area-title">エリアの位置編集</div>
+
+            <div class="area-count">
+                <span class="area-label">件数:</span>
+                <input type="text" class="area-count-input" id="areaCountDisplay" readonly value="0">
+            </div>
+
+            <div class="area-selector">
+                <span class="area-label">選択:</span>
+                <select class="area-dropdown" id="areaSelect">
+                    <option value="">選択してください</option>
+                </select>
+            </div>
+
+            <div class="area-name">
+                <span class="area-label">名称:</span>
+                <input type="text" class="area-name-input" id="selectedAreaName">
+            </div>
+
+            <div class="area-buttons">
+                <button class="area-btn" id="addMoveAreaBtn">追加・移動</button>
+                <button class="area-btn" id="deleteAreaBtn">削除</button>
+            </div>
         </div>
     </div>
 

@@ -15,6 +15,16 @@ export function getLoadedData() {
     return loadedDataInternal;
 }
 
+export function initData() {
+    if (!loadedDataInternal) {
+        loadedDataInternal = {
+            type: "FeatureCollection",
+            features: []
+        };
+    }
+    return loadedDataInternal;
+}
+
 export { loadedDataInternal as loadedData };
 
 // GeoJSONファイルの読み込み (廃止 -> Excel読み込みへ変更)

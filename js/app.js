@@ -4,12 +4,13 @@ import { MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats } from './stats.js';
 import { initializeMap } from './mapCore.js';
-import { getLoadedData, setupFileInput, setupFileExport, setupDatabaseLoad } from './fileIO.js';
+import { getLoadedData, initData, setupFileInput, setupFileExport, setupDatabaseLoad } from './fileIO.js';
 import * as RouteEditor from './routeEditor.js';
 import * as SpotEditor from './spotEditor.js';
+import * as AreaEditor from './areaEditor.js';
 
 // 地図とレイヤーの初期化
-const { map, geoJsonLayer, markerMap, spotMarkerMap } = initializeMap();
+const { map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap } = initializeMap();
 
 // グローバルアクセス用（最適化関数で使用）
 window.geoJsonLayer = geoJsonLayer;
@@ -42,6 +43,19 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
             document.getElementById('spotSelect').value = '';
             document.getElementById('selectedSpotName').value = '';
             document.getElementById('spotCategory').value = '';
+        }
+
+        // エリアモードから離れる場合、エリア関連の状態をリセット
+        if (this.value !== MODES.AREA) {
+            AreaEditor.resetAreaHighlight(map);
+
+            if (AreaEditor.isAddMoveAreaMode) {
+                AreaEditor.exitAddMoveAreaMode(map);
+            }
+
+            document.getElementById('areaSelect').value = '';
+            const nameInput = document.getElementById('selectedAreaName');
+            if (nameInput) nameInput.value = '';
         }
 
         // パネルの表示切り替え
@@ -458,5 +472,139 @@ document.getElementById('deleteSpotBtn').addEventListener('click', function () {
     showMessage('スポットを削除しました', 'success');
 });
 
-// 初期統計表示
-updateStats(null);
+// ========================================
+// エリア編集モードのイベントハンドラー
+// ========================================
+
+// エリアドロップダウンの変更イベントリスナー
+document.getElementById('areaSelect').addEventListener('change', function () {
+    const selectedIndex = this.value;
+    AreaEditor.highlightArea(selectedIndex, areaLayerMap, map);
+});
+
+// エリア名の変更イベントリスナー
+const areaNameInput = document.getElementById('selectedAreaName');
+if (areaNameInput) {
+    areaNameInput.addEventListener('blur', function () {
+        const newName = this.value.trim();
+        if (!AreaEditor.selectedAreaFeature || !newName) return;
+
+        // GeoJSONデータの名称を更新
+        if (AreaEditor.selectedAreaFeature.properties) {
+            AreaEditor.selectedAreaFeature.properties.name = newName;
+        }
+
+        // allAreasの名称を更新
+        const areaSelect = document.getElementById('areaSelect');
+        const currentIndex = parseInt(areaSelect.value);
+        if (AreaEditor.allAreas[currentIndex]) {
+            AreaEditor.allAreas[currentIndex].name = newName;
+        }
+
+        // Update dropdown
+        AreaEditor.updateAreaDropdown();
+        areaSelect.value = currentIndex;
+
+        showMessage('エリア名を更新しました', 'success');
+    });
+}
+
+// 追加・移動ボタン
+document.getElementById('addMoveAreaBtn').addEventListener('click', function () {
+    // 既にモードが有効なら解除
+    if (AreaEditor.isAddMoveAreaMode) {
+        AreaEditor.exitAddMoveAreaMode(map);
+        showMessage('追加・移動モードを解除しました', 'success');
+        return;
+    }
+
+    // データ初期化 (if null)
+    let loadedData = getLoadedData();
+    if (!loadedData) {
+        loadedData = initData();
+    }
+
+    // モード開始
+    AreaEditor.setIsAddMoveAreaMode(true);
+    this.classList.add('active');
+
+    if (AreaEditor.selectedAreaFeature && AreaEditor.selectedAreaLayer) {
+        // 移動・修正モード
+        AreaEditor.setupAreaDragMarker(AreaEditor.selectedAreaLayer, AreaEditor.selectedAreaFeature, map, areaLayerMap);
+        showMessage('エリアを選択中: 中心マーカーをドラッグして移動できます。\n地図をクリックで新しいエリアを作成開始できます。\nボタンをもう一度クリックで解除', 'success');
+    } else {
+        // 新規作成モード
+        showMessage('地図をクリックしてエリアの頂点を追加してください。（3点以上で始点付近をクリックして完了）\nボタンをもう一度クリックで解除', 'success');
+    }
+
+    map.getContainer().style.cursor = 'crosshair';
+
+    // クリックハンドラ
+    const areaHandler = function (e) {
+        if (!AreaEditor.isAddMoveAreaMode) return;
+
+        // ポリゴン作成中
+        AreaEditor.addAreaVertex(e.latlng, map, loadedData, areaLayerMap, geoJsonLayer);
+    };
+
+    AreaEditor.setAreaMapClickHandler(areaHandler);
+    map.on('click', areaHandler);
+});
+
+
+// 削除ボタン
+document.getElementById('deleteAreaBtn').addEventListener('click', function () {
+    if (!AreaEditor.selectedAreaFeature) {
+        showMessage('削除するエリアを選択してください', 'warning');
+        return;
+    }
+
+    const areaName = AreaEditor.selectedAreaFeature.properties && AreaEditor.selectedAreaFeature.properties.name;
+    if (!confirm(`エリア「${areaName}」を削除しますか？`)) return;
+
+    if (AreaEditor.isAddMoveAreaMode) {
+        AreaEditor.exitAddMoveAreaMode(map);
+    }
+
+    const data = getLoadedData();
+    if (data && data.features) {
+        const featureIndex = data.features.findIndex(f => f === AreaEditor.selectedAreaFeature);
+        if (featureIndex !== -1) data.features.splice(featureIndex, 1);
+    }
+
+    // Remove layer
+    if (AreaEditor.selectedAreaLayer) {
+        // Try to remove from map and geoJsonLayer
+        if (AreaEditor.selectedAreaLayer.remove) {
+            AreaEditor.selectedAreaLayer.remove();
+        }
+        if (geoJsonLayer.hasLayer(AreaEditor.selectedAreaLayer)) {
+            geoJsonLayer.removeLayer(AreaEditor.selectedAreaLayer);
+        }
+        map.removeLayer(AreaEditor.selectedAreaLayer);
+    }
+
+    // Remove from allAreas
+    const idx = AreaEditor.allAreas.findIndex(a => a.feature === AreaEditor.selectedAreaFeature);
+    if (idx !== -1) {
+        AreaEditor.allAreas.splice(idx, 1);
+    }
+
+    // Remove from marker map
+    areaLayerMap.delete(AreaEditor.selectedAreaFeature);
+
+    AreaEditor.setSelectedAreaFeature(null);
+    AreaEditor.setSelectedAreaLayer(null);
+
+    // Update Dropdown/Stats
+    AreaEditor.updateAreaDropdown();
+    updateStats(getLoadedData());
+
+    // Reset inputs
+    document.getElementById('areaSelect').value = '';
+    const nameInput = document.getElementById('selectedAreaName');
+    if (nameInput) nameInput.value = '';
+
+    showMessage('エリアを削除しました', 'success');
+});
+

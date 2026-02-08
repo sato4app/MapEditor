@@ -18,7 +18,7 @@ export function initializeMap() {
     }).addTo(map);
 
     const CustomZoomControl = L.Control.extend({
-        onAdd: function(map) {
+        onAdd: function (map) {
             const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
 
             const zoomInBtn = L.DomUtil.create('a', 'zoom-in-btn', container);
@@ -31,19 +31,19 @@ export function initializeMap() {
             zoomOutBtn.href = '#';
             zoomOutBtn.title = 'ズームアウト';
 
-            L.DomEvent.on(zoomInBtn, 'click', function(e) {
+            L.DomEvent.on(zoomInBtn, 'click', function (e) {
                 L.DomEvent.preventDefault(e);
                 map.zoomIn();
             });
 
-            L.DomEvent.on(zoomOutBtn, 'click', function(e) {
+            L.DomEvent.on(zoomOutBtn, 'click', function (e) {
                 L.DomEvent.preventDefault(e);
                 map.zoomOut();
             });
             return container;
         },
 
-        onRemove: function(map) {
+        onRemove: function (map) {
             // クリーンアップは特に必要なし
         }
     });
@@ -55,6 +55,7 @@ export function initializeMap() {
     const geoJsonLayer = L.layerGroup().addTo(map);
     const markerMap = new Map();
     const spotMarkerMap = new Map();
+    const areaLayerMap = new Map();
 
-    return { map, geoJsonLayer, markerMap, spotMarkerMap };
+    return { map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap };
 }
