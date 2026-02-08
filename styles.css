@@ -84,6 +84,12 @@ body {
     width: 60px;
     margin-left: 0;
     text-align: right;
+    margin-right: 5px;
+}
+
+.stats-value-row {
+    display: flex;
+    align-items: center;
 }
 
 .io-controls {
