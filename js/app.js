@@ -4,7 +4,7 @@ import { MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats } from './stats.js';
 import { initializeMap } from './mapCore.js';
-import { getLoadedData, setupFileInput, setupFileExport } from './fileIO.js';
+import { getLoadedData, setupFileInput, setupFileExport, setupDatabaseLoad } from './fileIO.js';
 import * as RouteEditor from './routeEditor.js';
 import * as SpotEditor from './spotEditor.js';
 
@@ -17,6 +17,7 @@ window.geoJsonLayer = geoJsonLayer;
 // ファイル入出力の設定
 setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap);
 setupFileExport();
+setupDatabaseLoad(map, geoJsonLayer, markerMap, spotMarkerMap);
 
 // モード切り替え処理
 document.querySelectorAll('input[name="mode"]').forEach(radio => {
@@ -44,28 +45,28 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
         }
 
         // パネルの表示切り替え
-        const geojsonPanel = document.getElementById('geojsonPanel');
+        const fileIoContainer = document.getElementById('fileIoContainer');
         const routePanel = document.getElementById('routePanel');
         const spotPanel = document.getElementById('spotPanel');
         const areaPanel = document.getElementById('areaPanel');
 
         if (this.value === MODES.GEOJSON) {
-            geojsonPanel.style.display = 'block';
+            fileIoContainer.style.display = 'block';
             routePanel.style.display = 'none';
             spotPanel.style.display = 'none';
             if (areaPanel) areaPanel.style.display = 'none';
         } else if (this.value === MODES.ROUTE) {
-            geojsonPanel.style.display = 'none';
+            fileIoContainer.style.display = 'none';
             routePanel.style.display = 'block';
             spotPanel.style.display = 'none';
             if (areaPanel) areaPanel.style.display = 'none';
         } else if (this.value === MODES.SPOT) {
-            geojsonPanel.style.display = 'none';
+            fileIoContainer.style.display = 'none';
             routePanel.style.display = 'none';
             spotPanel.style.display = 'block';
             if (areaPanel) areaPanel.style.display = 'none';
         } else if (this.value === MODES.AREA) {
-            geojsonPanel.style.display = 'none';
+            fileIoContainer.style.display = 'none';
             routePanel.style.display = 'none';
             spotPanel.style.display = 'none';
             if (areaPanel) areaPanel.style.display = 'block';

@@ -35,17 +35,10 @@
             </label>
         </div>
 
-        <div class="geojson-panel" id="geojsonPanel">
-            <div class="geojson-title">GeoJSONファイルの入出力</div>
-
-            <div class="geojson-controls">
-                <div class="geojson-left">
-                    <label for="fileInput" class="file-input-label">読み込み</label>
-                    <input type="file" id="fileInput" accept=".geojson" />
-                    <button id="exportBtn">出力</button>
-                </div>
-
-                <div class="geojson-right">
+        <div id="fileIoContainer">
+            <div class="stats-panel">
+                <div class="stats-title">読み込んだ情報の件数</div>
+                <div class="stats-grid">
                     <div class="stats-row">
                         <span>ファイル</span>
                         <input type="text" class="stats-input" id="fileCount" readonly>
@@ -65,6 +58,19 @@
                         <input type="text" class="stats-input" id="spotCount" readonly>
                         <span>個</span>
                     </div>
+                </div>
+            </div>
+
+            <div class="io-controls">
+                <div class="io-row">
+                    <label for="fileInput" class="file-input-label">ポイントGPS(Excel)の読み込み</label>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" />
+                </div>
+                <div class="io-row">
+                    <button id="loadDbBtn">データベースの読み込み</button>
+                </div>
+                <div class="io-row">
+                    <button id="exportBtn">GeoJSONファイルの出力</button>
                 </div>
             </div>
         </div>
