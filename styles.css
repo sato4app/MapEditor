@@ -68,6 +68,24 @@ body {
     width: 48%;
 }
 
+.stats-row-vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    font-size: 12px;
+}
+
+.stats-row-vertical span {
+    margin-bottom: 4px;
+}
+
+.stats-input-wide {
+    width: 60px;
+    margin-left: 0;
+    text-align: right;
+}
+
 .io-controls {
     display: flex;
     flex-direction: column;
