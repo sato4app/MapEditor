@@ -11,6 +11,9 @@ export const DEFAULTS = {
     GSI_TILE_URL: 'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',
     GSI_ATTRIBUTION: '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル</a>',
 
+    // Excel読み込み制限
+    MAX_EXCEL_ROWS: 1000, // ヘッダー行含む最大読み込み行数
+
     // スタイル設定
     POINT_STYLE: {
         radius: 6,

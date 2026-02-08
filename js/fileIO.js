@@ -31,10 +31,85 @@ export { loadedDataInternal as loadedData };
 export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
     document.getElementById('fileInput').addEventListener('change', async function (e) {
         const file = e.target.files[0];
-        if (file) {
-            // Excelファイルの読み込み処理（未実装）
-            showMessage('ポイントGPS(Excel)の読み込み機能は現在実装中です', 'warning');
+        if (!file) return;
 
+        try {
+            // Excelファイルの判定としきい値チェック
+            // 拡張子で簡易判定
+            if (file.name.toLowerCase().endsWith('.xlsx')) {
+                // 動的インポートでExcelローダーを読み込む
+                const { loadExcelFile } = await import('./excelLoader.js');
+                const points = await loadExcelFile(file);
+
+                if (!points || points.length === 0) {
+                    showMessage('有効なポイントデータが見つかりませんでした', 'warning');
+                    this.value = '';
+                    return;
+                }
+
+                // データを初期化または取得
+                let data = initData();
+
+                // GeoJSON Featureに変換
+                const newFeatures = points.map(p => ({
+                    type: "Feature",
+                    properties: {
+                        type: "ポイントGPS",
+                        name: p.name,
+                        pointId: p.pointId,
+                        elevation: p.elevation,
+                        description: p.description
+                    },
+                    geometry: {
+                        type: "Point",
+                        coordinates: [p.lng, p.lat]
+                    }
+                }));
+
+                // 既存データに追加
+                data.features.push(...newFeatures);
+
+                // マーカーを表示
+                newFeatures.forEach(f => {
+                    const lat = f.geometry.coordinates[1];
+                    const lng = f.geometry.coordinates[0];
+                    // スタイルを適用
+                    const style = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
+
+                    const marker = L.circleMarker([lat, lng], style);
+
+                    // ポップアップを設定
+                    let popupContent = `<b>${f.properties.name}</b>`;
+                    if (f.properties.description) {
+                        popupContent += `<br>${f.properties.description}`;
+                    }
+                    if (f.properties.elevation) {
+                        popupContent += `<br>標高: ${f.properties.elevation}m`;
+                    }
+                    marker.bindPopup(popupContent);
+
+                    geoJsonLayer.addLayer(marker);
+                });
+
+                // 統計情報を更新
+                updateStats(data);
+
+                showMessage(`${newFeatures.length}件のポイントGPSを読み込みました`, 'success');
+
+                // 地図の範囲を調整（オプション）
+                if (newFeatures.length > 0) {
+                    // 簡易的に最後のポイントに移動
+                    const lastPoint = newFeatures[newFeatures.length - 1];
+                    map.panTo([lastPoint.geometry.coordinates[1], lastPoint.geometry.coordinates[0]]);
+                }
+
+            } else {
+                showMessage('Excelファイル(.xlsx)を選択してください', 'warning');
+            }
+        } catch (error) {
+            console.error('File load error:', error);
+            showMessage(`読み込みエラー: ${error.message}`, 'error');
+        } finally {
             // ファイル選択をリセット
             this.value = '';
         }
