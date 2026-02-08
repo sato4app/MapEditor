@@ -81,6 +81,11 @@ export function updateStats(geoJsonData) {
     if (statsAreaCount) {
         statsAreaCount.value = areaCount;
     }
+
+    const waypointCountDisplay = document.getElementById('waypointCountDisplay');
+    if (waypointCountDisplay) {
+        waypointCountDisplay.value = waypointCount;
+    }
 }
 
 // 日付文字列生成関数（yyyymmdd形式）
