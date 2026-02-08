@@ -81,7 +81,7 @@ body {
 .io-row {
     width: 100%;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 .stats-row {
@@ -337,7 +337,7 @@ button:hover {
 .file-input-label {
     display: inline-block;
     width: 70%;
-    margin: 0 auto;
+    margin: 0;
     box-sizing: border-box;
     padding: 8px 0;
     border: 2px solid #666;
@@ -355,7 +355,7 @@ button:hover {
 #exportBtn,
 #loadDbBtn {
     width: 70%;
-    margin: 0 auto;
+    margin: 0;
     padding: 8px 0;
 }
 
