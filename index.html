@@ -80,10 +80,11 @@
                     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" />
                 </div>
                 <div class="io-row">
-                    <button id="loadDbBtn">データベースの読み込み</button>
+                    <label for="geoJsonInput" class="file-input-label" id="loadDbBtn">ファイル(GeoJSON)の読み込み</label>
+                    <input type="file" id="geoJsonInput" accept=".geojson, .json" style="display: none;" />
                 </div>
                 <div class="io-row">
-                    <button id="exportBtn">ファイル出力(GeoJSON)</button>
+                    <button id="exportBtn">ファイルへの出力(GeoJSON)</button>
                 </div>
             </div>
         </div>

@@ -44,6 +44,16 @@ export const DEFAULTS = {
             opacity: 1,
             fillOpacity: 1
         },
+        // ポイント: 赤色(#ff0000)、円形
+        'point': {
+            radius: 6,
+            fillColor: '#ff0000',
+            color: '#ff0000',
+            weight: 0,
+            stroke: false,
+            opacity: 1,
+            fillOpacity: 1
+        },
         // ルート中間点: 橙色(#f58220)、菱形（ダイヤモンド型）、8x8px（枠なし）
         'route_waypoint': {
             radius: 4,

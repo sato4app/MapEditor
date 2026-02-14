@@ -4,7 +4,7 @@ import { MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats } from './stats.js';
 import { initializeMap } from './mapCore.js';
-import { getLoadedData, initData, setupFileInput, setupFileExport, setupDatabaseLoad } from './fileIO.js';
+import { getLoadedData, initData, setupFileInput, setupFileExport, setupGeoJsonLoad } from './fileIO.js';
 import * as RouteEditor from './routeEditor.js';
 import * as SpotEditor from './spotEditor.js';
 import * as AreaEditor from './areaEditor.js';
@@ -18,7 +18,7 @@ window.geoJsonLayer = geoJsonLayer;
 // ファイル入出力の設定
 setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap);
 setupFileExport();
-setupDatabaseLoad(map, geoJsonLayer, markerMap, spotMarkerMap);
+setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap);
 
 // モード切り替え処理
 document.querySelectorAll('input[name="mode"]').forEach(radio => {
