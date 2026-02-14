@@ -737,3 +737,32 @@ button:hover {
 .area-drag-marker {
     cursor: move;
 }
+
+/* カスタムマーカー */
+.custom-div-icon {
+    background: transparent;
+    border: none;
+}
+
+.marker-pin {
+    width: 12px;
+    height: 12px;
+    display: block;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.marker-diamond {
+    background-color: #f58220;
+    /* Orange */
+    transform: rotate(45deg);
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    border: 1px solid white;
+}
+
+.marker-square {
+    background-color: #0000ff;
+    /* Blue */
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    border: 1px solid white;
+}

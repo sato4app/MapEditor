@@ -134,17 +134,9 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
             const features = json.features;
 
-            // データ初期化 (既存データに追加するか、置換するか？プロンプトは「読み込んで表示」なので、
-            // 既存のsetupFileInput(Excel)と同様に「追加」の挙動が安全だが、
-            // データベースの代わりなら「置換」かもしれない。しかしExcel読み込みは追加。
-            // ここではExcel読み込みに合わせて「追加」とするが、initDataはシングルトンを返すので
-            // 既存データがある場合は追加になる。
-            // もしクリアが必要なら `loadedDataInternal = ...` でリセットするが、
-            // ユーザーは「追加」を期待することもある。
-            // ひとまず「追加」で実装。
+            // データ初期化 (追加モード)
             let data = initData();
 
-            // 重複チェックなどは現状のExcelロジックにもないので省略
             data.features.push(...features);
 
             // マーカー/レイヤーの表示
@@ -158,7 +150,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 if (type === 'point' && f.geometry.type === 'Point') {
                     const lat = f.geometry.coordinates[1];
                     const lng = f.geometry.coordinates[0];
-                    const style = DEFAULTS.FEATURE_STYLES['point'] || DEFAULTS.FEATURE_STYLES['ポイントGPS']; // fallback
+                    const style = DEFAULTS.FEATURE_STYLES['point'] || DEFAULTS.FEATURE_STYLES['ポイントGPS'];
 
                     const marker = L.circleMarker([lat, lng], style);
 
@@ -168,69 +160,50 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     geoJsonLayer.addLayer(marker);
                 }
-                // 2. ルート (type="route") -> 中間点にオレンジ色の菱形
+                // 2. ルート (type="route") -> 中間点にオレンジ色の菱形 (線は描画しない)
                 else if (type === 'route' && f.geometry.type === 'LineString') {
-                    // Coordinates: [[lng, lat, ele], ...]
                     const coords = f.geometry.coordinates;
                     if (coords.length < 2) return;
 
                     // Leaflet用に [lat, lng] の配列に変換
                     const latLngs = coords.map(c => [c[1], c[0]]);
 
-                    // 線を描画 (定数のLINE_STYLEを使用)
-                    const polyline = L.polyline(latLngs, DEFAULTS.LINE_STYLE);
-                    geoJsonLayer.addLayer(polyline);
-
                     // 中間点の計算
-                    // 簡易的に全頂点の中央のインデックスの座標を取得するか、
-                    // 距離ベースで計算するか。
-                    // ここではLineStringの中央付近の頂点、または計算した中間点を使用。
-                    // 正確な中間点を計算する。
                     const totalDistance = calculateTotalDistance(latLngs);
                     const midpoint = calculatePointAtDistance(latLngs, totalDistance / 2);
 
                     if (midpoint) {
-                        const style = DEFAULTS.FEATURE_STYLES['route_waypoint'];
+                        // 菱形マーカー (CSSクラスを使用)
+                        const icon = L.divIcon({
+                            className: 'custom-div-icon',
+                            html: '<div class="marker-pin marker-diamond"></div>',
+                            iconSize: [12, 12],
+                            iconAnchor: [6, 6]
+                        });
 
-                        // 菱形マーカー (shape: 'diamond' はカスタム実装が必要だが、
-                        // constants.jsのroute_waypointには shape: 'diamond' がある。
-                        // MapEditorの実装では、L.circleMarkerに対して shape プロパティは標準では効かない。
-                        // おそらくカスタムレンダラーか、単に色/サイズで区別しているか、
-                        // あるいは circleMarker で四角を描くプラグインを使っているか。
-                        // 現状のコード(constants.js)を見る限り、shapeプロパティがあるが、
-                        // standard Leaflet circleMarker doesn't support shape.
-                        // しかし、constants.js にあるということは、何らかの処理があるはず。
-                        // 念のため、styleをそのまま渡す。
-
-                        // 注意: MapEditorの既存実装(routeEditor.jsなど)でどう描画しているか確認していないが、
-                        // おそらく標準のcircleMarkerのみであれば shape は無視されて円になる。
-                        // プロンプトは「菱形」と指定している。
-                        // Leafletで菱形を描くには、通常 L.marker with Icon or L.path with standard SVG.
-                        // しかし、constants.jsの定義に従う。
-
-                        const marker = L.circleMarker(midpoint, style);
+                        const marker = L.marker(midpoint, { icon: icon });
 
                         let popupContent = `<b>${props.name || 'ルート'}</b>`;
                         if (props.description) popupContent += `<br>${props.description}`;
                         marker.bindPopup(popupContent);
 
                         geoJsonLayer.addLayer(marker);
-
-                        // ルートIDとマーカーのマッピング (必要なら)
-                        // 今回は編集機能との連携は求められていない(単に表示)ので、
-                        // markerMapへの登録は必須ではないかもしれないが、
-                        // クリア時などに管理できたほうがよい。
-                        // しかし、ルートIDがユニークでないとMapで管理しにくい。
-                        // ここではgeoJsonLayerに追加するのみとする。
                     }
                 }
                 // 3. スポット (type="spot") -> 青色の正方形
                 else if (type === 'spot' && f.geometry.type === 'Point') {
                     const lat = f.geometry.coordinates[1];
                     const lng = f.geometry.coordinates[0];
-                    const style = DEFAULTS.FEATURE_STYLES['spot'];
 
-                    const marker = L.circleMarker([lat, lng], style);
+                    // 正方形マーカー (CSSクラスを使用)
+                    const icon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: '<div class="marker-pin marker-square"></div>',
+                        iconSize: [12, 12],
+                        iconAnchor: [6, 6]
+                    });
+
+                    const marker = L.marker([lat, lng], { icon: icon });
 
                     let popupContent = `<b>${props.name || 'スポット'}</b>`;
                     if (props.description) popupContent += `<br>${props.description}`;
@@ -238,27 +211,37 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     geoJsonLayer.addLayer(marker);
 
-                    // spotMarkerMapへの登録 (編集機能用)
                     if (spotMarkerMap) {
                         spotMarkerMap.set(f, marker);
                     }
-                    // allSpotsへの追加? 
-                    // SpotEditor.allSpots は js/spotEditor.js で管理されている。
-                    // 編集機能を有効にするなら loadGeoJsonFile のような関数を SpotEditor に作るべきだが、
-                    // 今回は「表示して」という要件。
-                    // 編集を可能にするには SpotEditor.allSpots に追加する必要がある。
-                    // ですが、まずは表示を優先。
                 }
-                // エリア (type="area") -> Polygon (要件にはないが、データ仕様にはある)
+                // エリア (type="area") -> Polygon (ピンク色のポリゴン)
                 else if (type === 'area' && f.geometry.type === 'Polygon') {
-                    // 必要なら実装。要件はルート、ポイント、スポットのみ記述されている。
-                    // しかしdataspec-geojson-202602.mdにはAreaもある。
-                    // 念のため表示だけしておくのが親切かも？
-                    // プロンプトには「GeoJSONファイルから読み込んで表示したデータのマーカーは以下の通りとして」とあり、
-                    // エリアについての指定はない。
-                    // 今回は明示的な指定がないため、スキップするか、デフォルト表示。
-                    // 既存のAreaEditorなどを見ると、エリアも表示できる。
-                    // 一旦スキップ。
+                    const coords = f.geometry.coordinates;
+
+                    if (coords.length > 0) {
+                        // GeoJSON Polygon coordinates are [[[lng, lat], ...]] (nested arrays for rings)
+                        const latLngs = coords.map(ring => ring.map(c => [c[1], c[0]]));
+
+                        const style = {
+                            color: 'pink',
+                            fillColor: 'pink',
+                            fillOpacity: 0.5,
+                            weight: 2
+                        };
+
+                        const polygon = L.polygon(latLngs, style);
+
+                        let popupContent = `<b>${props.name || 'エリア'}</b>`;
+                        if (props.description) popupContent += `<br>${props.description}`;
+                        polygon.bindPopup(popupContent);
+
+                        geoJsonLayer.addLayer(polygon);
+
+                        if (areaLayerMap) {
+                            areaLayerMap.set(f, polygon);
+                        }
+                    }
                 }
             });
 
