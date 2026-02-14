@@ -160,7 +160,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     geoJsonLayer.addLayer(marker);
                 }
-                // 2. ルート (type="route") -> 中間点にオレンジ色の菱形 (線は描画しない)
+                // 2. ルート (type="route") -> 全ての座標点にオレンジ色の菱形 (線は描画しない)
                 else if (type === 'route' && f.geometry.type === 'LineString') {
                     const coords = f.geometry.coordinates;
                     if (coords.length < 2) return;
@@ -168,11 +168,8 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     // Leaflet用に [lat, lng] の配列に変換
                     const latLngs = coords.map(c => [c[1], c[0]]);
 
-                    // 中間点の計算
-                    const totalDistance = calculateTotalDistance(latLngs);
-                    const midpoint = calculatePointAtDistance(latLngs, totalDistance / 2);
-
-                    if (midpoint) {
+                    // 全ての座標にマーカーを表示
+                    latLngs.forEach((latLng, index) => {
                         // 菱形マーカー (CSSクラスを使用)
                         const icon = L.divIcon({
                             className: 'custom-div-icon',
@@ -181,14 +178,15 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                             iconAnchor: [6, 6]
                         });
 
-                        const marker = L.marker(midpoint, { icon: icon });
+                        const marker = L.marker(latLng, { icon: icon });
 
-                        let popupContent = `<b>${props.name || 'ルート'}</b>`;
+                        let popupContent = `<b>${props.name || 'ルート'}</b><br>No. ${index + 1}`;
                         if (props.description) popupContent += `<br>${props.description}`;
+                        if (coords[index][2] !== undefined) popupContent += `<br>標高: ${coords[index][2]}m`;
                         marker.bindPopup(popupContent);
 
                         geoJsonLayer.addLayer(marker);
-                    }
+                    });
                 }
                 // 3. スポット (type="spot") -> 青色の正方形
                 else if (type === 'spot' && f.geometry.type === 'Point') {
