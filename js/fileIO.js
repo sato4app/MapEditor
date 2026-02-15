@@ -97,10 +97,9 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                 showMessage(`${newFeatures.length}件のポイントGPSを読み込みました`, 'success');
 
                 // 地図の範囲を調整（オプション）
+                // 箕面大滝を中心（初期表示）とするため、ここでは移動しない
                 if (newFeatures.length > 0) {
-                    // 簡易的に最後のポイントに移動
-                    const lastPoint = newFeatures[newFeatures.length - 1];
-                    map.panTo([lastPoint.geometry.coordinates[1], lastPoint.geometry.coordinates[0]]);
+                    // 何もしない
                 }
 
             } else {
