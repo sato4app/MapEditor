@@ -45,8 +45,7 @@ export function extractSpots(geoJsonData) {
         const featureType = feature.properties && feature.properties.type;
         const geometryType = feature.geometry && feature.geometry.type;
 
-        if ((geometryType === 'Polygon' || geometryType === 'MultiPolygon') ||
-            (geometryType === 'Point' && featureType === 'spot')) {
+        if (geometryType === 'Point' && featureType === 'spot') {
             const name = feature.properties && feature.properties.name;
             if (name) {
                 allSpots.push({

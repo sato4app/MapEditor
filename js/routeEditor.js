@@ -45,6 +45,14 @@ export function extractPointsAndRoutes(geoJsonData) {
                 routeIdSet.add(routeId);
             }
         }
+
+        // LineString ルート (type='route') からも route_id を収集（GeoReferencer形式互換）
+        if (geometryType === 'LineString' && featureType === 'route') {
+            const routeId = feature.properties && feature.properties.id;
+            if (routeId) {
+                routeIdSet.add(routeId);
+            }
+        }
     });
 
     // route_idからルートを構築
@@ -221,7 +229,20 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
         coordinates.push([lat, lng]);
     }
 
-    return coordinates.length >= 2 ? coordinates : null;
+    // ポイントGPS + route_waypoint から座標が取れた場合はそれを返す
+    if (coordinates.length >= 2) return coordinates;
+
+    // フォールバック: type='route' LineString から直接座標を取得（GeoReferencer形式互換）
+    const routeLineFeature = loadedData.features.find(f =>
+        f.properties && f.properties.type === 'route' &&
+        f.properties.id === routeId &&
+        f.geometry && f.geometry.type === 'LineString'
+    );
+    if (routeLineFeature && routeLineFeature.geometry.coordinates.length >= 2) {
+        return routeLineFeature.geometry.coordinates.map(c => [c[1], c[0]]);
+    }
+
+    return null;
 }
 
 // ルートハイライト

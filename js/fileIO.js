@@ -180,33 +180,43 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     geoJsonLayer.addLayer(marker);
                 }
-                // 2. ルート (type="route") -> 全ての座標点にオレンジ色の菱形 (線は描画しない)
+                // 2. ルート (type="route") -> route_X_to_Y パターンはポリライン表示（変換処理でマーカー作成）
+                //                           それ以外は全座標に菱形マーカー表示
                 else if (type === 'route' && f.geometry.type === 'LineString') {
                     const coords = f.geometry.coordinates;
                     if (coords.length < 2) return;
 
-                    // Leaflet用に [lat, lng] の配列に変換
                     const latLngs = coords.map(c => [c[1], c[0]]);
+                    const routeId = props.id;
+                    const isEditableRoute = routeId && /^route_(.+)_to_(.+)$/.test(routeId);
 
-                    // 全ての座標にマーカーを表示
-                    latLngs.forEach((latLng, index) => {
-                        // 菱形マーカー (CSSクラスを使用)
-                        const icon = L.divIcon({
-                            className: 'custom-div-icon',
-                            html: '<div class="marker-pin marker-diamond"></div>',
-                            iconSize: [12, 12],
-                            iconAnchor: [6, 6]
-                        });
-
-                        const marker = L.marker(latLng, { icon: icon });
-
-                        let popupContent = `<b>${props.name || 'ルート'}</b><br>No. ${index + 1}`;
+                    if (isEditableRoute) {
+                        // 編集用ルート: ポリラインで参考表示（変換処理でポイントGPS/route_waypointマーカーを別途作成）
+                        const line = L.polyline(latLngs, { color: '#f58220', weight: 2, opacity: 0.6 });
+                        let popupContent = `<b>${props.name || 'ルート'}</b>`;
                         if (props.description) popupContent += `<br>${props.description}`;
-                        if (coords[index][2] !== undefined) popupContent += `<br>標高: ${coords[index][2]}m`;
-                        marker.bindPopup(popupContent);
+                        line.bindPopup(popupContent);
+                        geoJsonLayer.addLayer(line);
+                    } else {
+                        // 非編集用ルート: 全ての座標に菱形マーカーを表示（従来動作）
+                        latLngs.forEach((latLng, index) => {
+                            const icon = L.divIcon({
+                                className: 'custom-div-icon',
+                                html: '<div class="marker-pin marker-diamond"></div>',
+                                iconSize: [12, 12],
+                                iconAnchor: [6, 6]
+                            });
 
-                        geoJsonLayer.addLayer(marker);
-                    });
+                            const marker = L.marker(latLng, { icon: icon });
+
+                            let popupContent = `<b>${props.name || 'ルート'}</b><br>No. ${index + 1}`;
+                            if (props.description) popupContent += `<br>${props.description}`;
+                            if (coords[index][2] !== undefined) popupContent += `<br>標高: ${coords[index][2]}m`;
+                            marker.bindPopup(popupContent);
+
+                            geoJsonLayer.addLayer(marker);
+                        });
+                    }
                 }
                 // 3. スポット (type="spot") -> 青色の正方形
                 else if (type === 'spot' && f.geometry.type === 'Point') {
@@ -329,6 +339,103 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                 if (markerMap) {
                     markerMap.set(routeId, markers);
+                }
+            });
+
+            // type='route' LineString (route_X_to_Y パターン) を MapEditor内部形式に変換
+            // ポイントGPS + route_waypoint を自動生成してルート編集を可能にする
+            features.forEach(f => {
+                if (!f.properties || !f.geometry || f.geometry.type !== 'LineString') return;
+                if (f.properties.type !== 'route') return;
+
+                const routeId = f.properties.id;
+                if (!routeId) return;
+
+                const match = routeId.match(/^route_(.+)_to_(.+)$/);
+                if (!match) return;
+
+                // 既に route_waypoint が存在する場合はスキップ（重複防止）
+                const alreadyHasWaypoints = data.features.some(feat =>
+                    feat.properties && feat.properties.route_id === routeId && feat.properties.type === 'route_waypoint'
+                );
+                if (alreadyHasWaypoints) return;
+
+                const startId = match[1];
+                const endId = match[2];
+                const coords = f.geometry.coordinates;
+                if (coords.length < 2) return;
+
+                const gpsStyle = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
+                const wpStyle = DEFAULTS.FEATURE_STYLES['route_waypoint'];
+
+                // 開始ポイントを ポイントGPS として登録（まだなければ）
+                const startExists = data.features.some(feat =>
+                    feat.properties && feat.properties.type === 'ポイントGPS' && feat.properties.id === startId
+                );
+                if (!startExists) {
+                    const [sLng, sLat] = coords[0];
+                    const startFeature = {
+                        type: 'Feature',
+                        properties: { type: 'ポイントGPS', id: startId, name: startId },
+                        geometry: { type: 'Point', coordinates: [sLng, sLat] }
+                    };
+                    data.features.push(startFeature);
+                    const marker = L.circleMarker([sLat, sLng], gpsStyle);
+                    marker.bindPopup(`<b>${startId}</b>`);
+                    geoJsonLayer.addLayer(marker);
+                    if (markerMap) markerMap.set(startId, marker);
+                }
+
+                // 終了ポイントを ポイントGPS として登録（まだなければ）
+                const lastCoord = coords[coords.length - 1];
+                const endExists = data.features.some(feat =>
+                    feat.properties && feat.properties.type === 'ポイントGPS' && feat.properties.id === endId
+                );
+                if (!endExists) {
+                    const [eLng, eLat] = lastCoord;
+                    const endFeature = {
+                        type: 'Feature',
+                        properties: { type: 'ポイントGPS', id: endId, name: endId },
+                        geometry: { type: 'Point', coordinates: [eLng, eLat] }
+                    };
+                    data.features.push(endFeature);
+                    const marker = L.circleMarker([eLat, eLng], gpsStyle);
+                    marker.bindPopup(`<b>${endId}</b>`);
+                    geoJsonLayer.addLayer(marker);
+                    if (markerMap) markerMap.set(endId, marker);
+                }
+
+                // 中間座標を route_waypoint として登録
+                const middleCoords = coords.slice(1, -1);
+                const waypointMarkers = [];
+
+                middleCoords.forEach((coord, index) => {
+                    const [wLng, wLat] = coord;
+                    const wpFeature = {
+                        type: 'Feature',
+                        properties: {
+                            type: 'route_waypoint',
+                            route_id: routeId,
+                            waypoint_number: (index + 1).toString()
+                        },
+                        geometry: { type: 'Point', coordinates: [wLng, wLat] }
+                    };
+                    data.features.push(wpFeature);
+
+                    const marker = L.marker([wLat, wLng], {
+                        icon: L.divIcon({
+                            className: 'diamond-marker',
+                            html: `<div style="width: ${wpStyle.radius * 2}px; height: ${wpStyle.radius * 2}px; background-color: #f58220; transform: rotate(45deg); opacity: ${wpStyle.fillOpacity};"></div>`,
+                            iconSize: [wpStyle.radius * 2, wpStyle.radius * 2],
+                            iconAnchor: [wpStyle.radius, wpStyle.radius]
+                        })
+                    });
+                    geoJsonLayer.addLayer(marker);
+                    waypointMarkers.push(marker);
+                });
+
+                if (markerMap && waypointMarkers.length > 0) {
+                    markerMap.set(routeId, waypointMarkers);
                 }
             });
 
