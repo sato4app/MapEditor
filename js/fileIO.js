@@ -4,7 +4,8 @@ import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString } from './stats.js';
 import { extractPointsAndRoutes, updateDropdowns } from './routeEditor.js';
-import { extractSpots, updateSpotDropdown } from './spotEditor.js';
+import { extractSpots, updateSpotDropdown, highlightSpot, allSpots } from './spotEditor.js';
+import { extractAreas, updateAreaDropdown, highlightArea, allAreas } from './areaEditor.js';
 
 // ファイル入出力の状態管理
 let loadedDataInternal = null;
@@ -226,6 +227,18 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     if (props.description) popupContent += `<br>${props.description}`;
                     marker.bindPopup(popupContent);
 
+                    // スポットモードでクリックしたときにドロップダウンと連動
+                    marker.on('click', function(e) {
+                        const currentMode = document.querySelector('input[name="mode"]:checked').value;
+                        if (currentMode === MODES.SPOT) {
+                            const spotIndex = allSpots.findIndex(spot => spot.feature === f);
+                            if (spotIndex !== -1) {
+                                document.getElementById('spotSelect').value = spotIndex;
+                                highlightSpot(spotIndex, spotMarkerMap);
+                            }
+                        }
+                    });
+
                     geoJsonLayer.addLayer(marker);
 
                     if (spotMarkerMap) {
@@ -252,6 +265,19 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         let popupContent = `<b>${props.name || 'エリア'}</b>`;
                         if (props.description) popupContent += `<br>${props.description}`;
                         polygon.bindPopup(popupContent);
+
+                        // エリアモードでクリックしたときにドロップダウンと連動
+                        polygon.on('click', function(e) {
+                            const currentMode = document.querySelector('input[name="mode"]:checked').value;
+                            if (currentMode === MODES.AREA) {
+                                const index = allAreas.findIndex(a => a.feature === f);
+                                if (index !== -1) {
+                                    document.getElementById('areaSelect').value = index;
+                                    highlightArea(index, areaLayerMap, map);
+                                    L.DomEvent.stopPropagation(e);
+                                }
+                            }
+                        });
 
                         geoJsonLayer.addLayer(polygon);
 
@@ -309,6 +335,14 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
             // ルート編集ドロップダウンを更新（GeoJSON読み込み後に選択可能にする）
             extractPointsAndRoutes(data);
             updateDropdowns(data);
+
+            // スポット編集ドロップダウンを更新
+            extractSpots(data);
+            updateSpotDropdown();
+
+            // エリア編集ドロップダウンを更新
+            extractAreas(data);
+            updateAreaDropdown();
 
             // 統計情報を更新
             updateStats(data);
