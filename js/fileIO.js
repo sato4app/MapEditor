@@ -145,8 +145,28 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 const props = f.properties || {};
                 const type = props.type;
 
+                // 0. ポイントGPS (type="ポイントGPS") -> 緑色の丸型マーカー、markerMapにpointIdで登録
+                if (type === 'ポイントGPS' && f.geometry.type === 'Point') {
+                    const lat = f.geometry.coordinates[1];
+                    const lng = f.geometry.coordinates[0];
+                    const style = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
+
+                    const marker = L.circleMarker([lat, lng], style);
+
+                    let popupContent = `<b>${props.name || '名称未設定'}</b>`;
+                    if (props.description) popupContent += `<br>${props.description}`;
+                    if (props.elevation) popupContent += `<br>標高: ${props.elevation}m`;
+                    marker.bindPopup(popupContent);
+
+                    geoJsonLayer.addLayer(marker);
+
+                    // markerMapにpointIdをキーとして登録（ルート編集で開始・終了点のハイライトに使用）
+                    if (props.id && markerMap) {
+                        markerMap.set(props.id, marker);
+                    }
+                }
                 // 1. ポイント (type="point") -> 赤色の丸型
-                if (type === 'point' && f.geometry.type === 'Point') {
+                else if (type === 'point' && f.geometry.type === 'Point') {
                     const lat = f.geometry.coordinates[1];
                     const lng = f.geometry.coordinates[0];
                     const style = DEFAULTS.FEATURE_STYLES['point'] || DEFAULTS.FEATURE_STYLES['ポイントGPS'];
@@ -241,6 +261,54 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     }
                 }
             });
+
+            // route_waypoint マーカーを route_id でグループ化し waypoint_number 順にソートして markerMap に登録
+            const routeWaypointGroups = new Map();
+            features.forEach(f => {
+                if (f.properties && f.properties.type === 'route_waypoint' &&
+                    f.geometry && f.geometry.type === 'Point') {
+                    const routeId = f.properties.route_id;
+                    if (routeId) {
+                        if (!routeWaypointGroups.has(routeId)) {
+                            routeWaypointGroups.set(routeId, []);
+                        }
+                        routeWaypointGroups.get(routeId).push(f);
+                    }
+                }
+            });
+
+            routeWaypointGroups.forEach((waypoints, routeId) => {
+                waypoints.sort((a, b) => {
+                    const numA = parseInt(a.properties.waypoint_number) || 0;
+                    const numB = parseInt(b.properties.waypoint_number) || 0;
+                    return numA - numB;
+                });
+
+                const style = DEFAULTS.FEATURE_STYLES['route_waypoint'];
+                const markers = [];
+
+                waypoints.forEach(wp => {
+                    const [lng, lat] = wp.geometry.coordinates;
+                    const marker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            className: 'diamond-marker',
+                            html: `<div style="width: ${style.radius * 2}px; height: ${style.radius * 2}px; background-color: #f58220; transform: rotate(45deg); opacity: ${style.fillOpacity};"></div>`,
+                            iconSize: [style.radius * 2, style.radius * 2],
+                            iconAnchor: [style.radius, style.radius]
+                        })
+                    });
+                    geoJsonLayer.addLayer(marker);
+                    markers.push(marker);
+                });
+
+                if (markerMap) {
+                    markerMap.set(routeId, markers);
+                }
+            });
+
+            // ルート編集ドロップダウンを更新（GeoJSON読み込み後に選択可能にする）
+            extractPointsAndRoutes(data);
+            updateDropdowns(data);
 
             // 統計情報を更新
             updateStats(data);
