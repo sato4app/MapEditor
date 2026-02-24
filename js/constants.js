@@ -76,12 +76,12 @@ export const DEFAULTS = {
             fillOpacity: 0.8,
             shape: 'square'
         },
-        // エリア: 青色(#3388ff)、ポリゴン境界線、頂点は円形(radius 4)
+        // エリア: シアン(#00ffff)、ポリゴン境界線、頂点は円形(radius 4)
         'area': {
-            color: '#3388ff',
+            color: '#00ffff',
             weight: 3,
             opacity: 1,
-            fillOpacity: 0.1,
+            fillOpacity: 0.2,
             vertex: {
                 radius: 4,
                 shape: 'circle'
