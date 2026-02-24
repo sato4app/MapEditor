@@ -693,16 +693,9 @@ button:hover {
     background-color: white;
 }
 
-.area-estimated-area {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-}
-
 .area-estimated-area-input {
-    flex: 1;
-    padding: 6px 8px;
+    width: 56px;
+    padding: 6px 4px;
     font-size: 12px;
     border: 2px solid #333;
     border-radius: 4px;
@@ -712,11 +705,12 @@ button:hover {
 
 .area-buttons {
     display: flex;
-    gap: 12px;
+    align-items: center;
+    gap: 6px;
 }
 
 .area-btn {
-    padding: 6px 16px;
+    padding: 6px 10px;
     font-size: 12px;
     border: 2px solid #333;
     border-radius: 4px;
