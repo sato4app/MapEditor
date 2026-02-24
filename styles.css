@@ -709,6 +709,10 @@ button:hover {
     gap: 6px;
 }
 
+.area-buttons .area-label {
+    margin-left: 12px;
+}
+
 .area-btn {
     padding: 6px 10px;
     font-size: 12px;
