@@ -90,6 +90,46 @@ export function updateAreaDropdown() {
     }
 }
 
+// ポリゴンの面積計算（㎡）
+function calculatePolygonAreaSqM(feature) {
+    const geometryType = feature.geometry.type;
+    const coordinates = feature.geometry.coordinates;
+    let totalArea = 0;
+
+    function shoelaceArea(ring) {
+        if (!ring || ring.length < 3) return 0;
+        let latSum = 0;
+        ring.forEach(coord => { latSum += coord[1]; });
+        const avgLat = latSum / ring.length;
+        const latMPD = 111319.9;
+        const lngMPD = 111319.9 * Math.cos(avgLat * Math.PI / 180);
+        let area = 0;
+        const n = ring.length;
+        for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n;
+            area += (ring[i][0] * lngMPD) * (ring[j][1] * latMPD);
+            area -= (ring[j][0] * lngMPD) * (ring[i][1] * latMPD);
+        }
+        return Math.abs(area / 2);
+    }
+
+    if (geometryType === 'Polygon') {
+        coordinates.forEach((ring, idx) => {
+            const a = shoelaceArea(ring);
+            totalArea = idx === 0 ? totalArea + a : totalArea - a;
+        });
+    } else if (geometryType === 'MultiPolygon') {
+        coordinates.forEach(polygon => {
+            polygon.forEach((ring, idx) => {
+                const a = shoelaceArea(ring);
+                totalArea = idx === 0 ? totalArea + a : totalArea - a;
+            });
+        });
+    }
+
+    return Math.max(0, totalArea);
+}
+
 // 重心計算
 function getPolygonCenter(coordinates) {
     // 簡易的な重心計算（GeoJSONのPolygon座標構造に対応: [[[lng, lat], ...]]）
@@ -152,6 +192,13 @@ export function highlightArea(areaIndex, areaLayerMap, map) {
 
     // 名称を表示
     document.getElementById('selectedAreaName').value = area.name;
+
+    // 推定面積を表示
+    const estimatedAreaInput = document.getElementById('selectedAreaEstimatedArea');
+    if (estimatedAreaInput) {
+        const areaSqM = calculatePolygonAreaSqM(area.feature);
+        estimatedAreaInput.value = Math.round(areaSqM).toLocaleString();
+    }
 
     // ハイライト（水色）
     if (layer.setStyle) {
@@ -307,6 +354,9 @@ export function resetAreaHighlight(map) {
     setSelectedAreaLayer(null);
     const nameInput = document.getElementById('selectedAreaName');
     if (nameInput) nameInput.value = '';
+
+    const estimatedAreaInput = document.getElementById('selectedAreaEstimatedArea');
+    if (estimatedAreaInput) estimatedAreaInput.value = '';
 }
 
 // エリア追加・移動モードの開始・終了
