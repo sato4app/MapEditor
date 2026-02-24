@@ -255,7 +255,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         spotMarkerMap.set(f, marker);
                     }
                 }
-                // エリア (type="area") -> Polygon (ピンク色のポリゴン)
+                // エリア (type="area") -> Polygon
                 else if (type === 'area' && f.geometry.type === 'Polygon') {
                     const coords = f.geometry.coordinates;
 
@@ -263,14 +263,16 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         // GeoJSON Polygon coordinates are [[[lng, lat], ...]] (nested arrays for rings)
                         const latLngs = coords.map(ring => ring.map(c => [c[1], c[0]]));
 
-                        const style = {
-                            color: 'pink',
-                            fillColor: 'pink',
-                            fillOpacity: 0.5,
-                            weight: 2
+                        const areaStyle = DEFAULTS.FEATURE_STYLES['area'];
+                        const polygonStyle = {
+                            color: areaStyle.color,
+                            fillColor: areaStyle.color,
+                            fillOpacity: areaStyle.fillOpacity,
+                            opacity: areaStyle.opacity,
+                            weight: areaStyle.weight
                         };
 
-                        const polygon = L.polygon(latLngs, style);
+                        const polygon = L.polygon(latLngs, polygonStyle);
 
                         let popupContent = `<b>${props.name || 'エリア'}</b>`;
                         if (props.description) popupContent += `<br>${props.description}`;
@@ -290,6 +292,21 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         });
 
                         geoJsonLayer.addLayer(polygon);
+
+                        // 頂点マーカーを追加（外周リングのみ）
+                        const vStyle = {
+                            radius: areaStyle.vertex.radius,
+                            fillColor: areaStyle.color,
+                            color: areaStyle.color,
+                            weight: 0,
+                            fillOpacity: 1
+                        };
+                        const outerRing = coords[0];
+                        outerRing.forEach((coord, i) => {
+                            // 閉じるための重複点（最終点）はスキップ
+                            if (i === outerRing.length - 1) return;
+                            geoJsonLayer.addLayer(L.circleMarker([coord[1], coord[0]], vStyle));
+                        });
 
                         if (areaLayerMap) {
                             areaLayerMap.set(f, polygon);

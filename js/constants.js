@@ -54,9 +54,9 @@ export const DEFAULTS = {
             opacity: 1,
             fillOpacity: 1
         },
-        // ルート中間点: 橙色(#f58220)、菱形（ダイヤモンド型）、8x8px（枠なし）
+        // ルート中間点: 橙色(#f58220)、菱形（ダイヤモンド型）、5x5px（枠なし）
         'route_waypoint': {
-            radius: 4,
+            radius: 2.5,
             fillColor: '#f58220',
             color: '#f58220',
             weight: 0,
@@ -75,6 +75,17 @@ export const DEFAULTS = {
             opacity: 1,
             fillOpacity: 0.8,
             shape: 'square'
+        },
+        // エリア: 青色(#3388ff)、ポリゴン境界線、頂点は円形(radius 4)
+        'area': {
+            color: '#3388ff',
+            weight: 3,
+            opacity: 1,
+            fillOpacity: 0.1,
+            vertex: {
+                radius: 4,
+                shape: 'circle'
+            }
         }
     },
 

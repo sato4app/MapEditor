@@ -346,7 +346,14 @@ export function resetAreaHighlight(map) {
     if (selectedAreaLayer) {
         // 元の色に戻す
         if (selectedAreaLayer.setStyle) {
-            selectedAreaLayer.setStyle(DEFAULTS.LINE_STYLE);
+            const areaStyle = DEFAULTS.FEATURE_STYLES['area'];
+            selectedAreaLayer.setStyle({
+                color: areaStyle.color,
+                fillColor: areaStyle.color,
+                fillOpacity: areaStyle.fillOpacity,
+                opacity: areaStyle.opacity,
+                weight: areaStyle.weight
+            });
         }
     }
 
@@ -475,8 +482,16 @@ export function completeAreaCreation(loadedData, areaLayerMap, geoJsonLayer, map
     loadedData.features.push(newAreaFeature);
 
     // レイヤー作成と追加
+    const areaStyle = DEFAULTS.FEATURE_STYLES['area'];
+    const polygonStyle = {
+        color: areaStyle.color,
+        fillColor: areaStyle.color,
+        fillOpacity: areaStyle.fillOpacity,
+        opacity: areaStyle.opacity,
+        weight: areaStyle.weight
+    };
     const layer = L.geoJSON(newAreaFeature, {
-        style: DEFAULTS.LINE_STYLE,
+        style: polygonStyle,
         onEachFeature: function (feature, layer) {
             // イベントリスナー設定
             layer.on('click', function (e) {
@@ -499,6 +514,19 @@ export function completeAreaCreation(loadedData, areaLayerMap, geoJsonLayer, map
 
     // mapCore/fileIOで使われている feature -> layer マップに登録
     areaLayerMap.set(newAreaFeature, actualLayer);
+
+    // 頂点マーカーを追加（外周リングのみ）
+    const vStyle = {
+        radius: areaStyle.vertex.radius,
+        fillColor: areaStyle.color,
+        color: areaStyle.color,
+        weight: 0,
+        fillOpacity: 1
+    };
+    newAreaFeature.geometry.coordinates[0].forEach((coord, i) => {
+        if (i === newAreaFeature.geometry.coordinates[0].length - 1) return;
+        geoJsonLayer.addLayer(L.circleMarker([coord[1], coord[0]], vStyle));
+    });
 
     const newArea = {
         name: newAreaName,
