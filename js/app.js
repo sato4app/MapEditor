@@ -597,35 +597,37 @@ document.getElementById('deleteAreaBtn').addEventListener('click', function () {
         AreaEditor.exitMoveAreaMode(map);
     }
 
+    // 削除前に参照を保持
+    const featureToDelete = AreaEditor.selectedAreaFeature;
+    const layerToDelete = AreaEditor.selectedAreaLayer;
+
+    // 頂点マーカー等を削除してハイライト状態をリセット
+    AreaEditor.resetAreaHighlight(map);
+
     const data = getLoadedData();
     if (data && data.features) {
-        const featureIndex = data.features.findIndex(f => f === AreaEditor.selectedAreaFeature);
+        const featureIndex = data.features.findIndex(f => f === featureToDelete);
         if (featureIndex !== -1) data.features.splice(featureIndex, 1);
     }
 
     // Remove layer
-    if (AreaEditor.selectedAreaLayer) {
-        // Try to remove from map and geoJsonLayer
-        if (AreaEditor.selectedAreaLayer.remove) {
-            AreaEditor.selectedAreaLayer.remove();
+    if (layerToDelete) {
+        if (geoJsonLayer.hasLayer(layerToDelete)) {
+            geoJsonLayer.removeLayer(layerToDelete);
         }
-        if (geoJsonLayer.hasLayer(AreaEditor.selectedAreaLayer)) {
-            geoJsonLayer.removeLayer(AreaEditor.selectedAreaLayer);
+        if (map.hasLayer(layerToDelete)) {
+            map.removeLayer(layerToDelete);
         }
-        map.removeLayer(AreaEditor.selectedAreaLayer);
     }
 
     // Remove from allAreas
-    const idx = AreaEditor.allAreas.findIndex(a => a.feature === AreaEditor.selectedAreaFeature);
+    const idx = AreaEditor.allAreas.findIndex(a => a.feature === featureToDelete);
     if (idx !== -1) {
         AreaEditor.allAreas.splice(idx, 1);
     }
 
     // Remove from marker map
-    areaLayerMap.delete(AreaEditor.selectedAreaFeature);
-
-    AreaEditor.setSelectedAreaFeature(null);
-    AreaEditor.setSelectedAreaLayer(null);
+    areaLayerMap.delete(featureToDelete);
 
     // Update Dropdown/Stats
     AreaEditor.updateAreaDropdown();
