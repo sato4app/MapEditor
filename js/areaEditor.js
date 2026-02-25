@@ -672,19 +672,6 @@ export function completeAreaCreation(loadedData, areaLayerMap, geoJsonLayer, map
     // mapCore/fileIOで使われている feature -> layer マップに登録
     areaLayerMap.set(newAreaFeature, actualLayer);
 
-    // 頂点マーカーを追加（外周リングのみ）
-    const vStyle = {
-        radius: areaStyle.vertex.radius,
-        fillColor: areaStyle.color,
-        color: areaStyle.color,
-        weight: 0,
-        fillOpacity: 1
-    };
-    newAreaFeature.geometry.coordinates[0].forEach((coord, i) => {
-        if (i === newAreaFeature.geometry.coordinates[0].length - 1) return;
-        geoJsonLayer.addLayer(L.circleMarker([coord[1], coord[0]], { ...vStyle, interactive: false }));
-    });
-
     const newArea = {
         name: newAreaName,
         feature: newAreaFeature

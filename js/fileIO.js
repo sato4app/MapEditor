@@ -293,21 +293,6 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                         geoJsonLayer.addLayer(polygon);
 
-                        // 頂点マーカーを追加（外周リングのみ）
-                        const vStyle = {
-                            radius: areaStyle.vertex.radius,
-                            fillColor: areaStyle.color,
-                            color: areaStyle.color,
-                            weight: 0,
-                            fillOpacity: 1
-                        };
-                        const outerRing = coords[0];
-                        outerRing.forEach((coord, i) => {
-                            // 閉じるための重複点（最終点）はスキップ
-                            if (i === outerRing.length - 1) return;
-                            geoJsonLayer.addLayer(L.circleMarker([coord[1], coord[0]], { ...vStyle, interactive: false }));
-                        });
-
                         if (areaLayerMap) {
                             areaLayerMap.set(f, polygon);
                         }
