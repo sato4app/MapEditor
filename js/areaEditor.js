@@ -16,6 +16,11 @@ let drawingPolyline = null;
 let drawingCoordinates = [];
 let centerMarker = null;
 
+// 頂点編集用マーカーと境界クリックハンドラー
+let vertexMarkers = [];
+let boundaryClickLayer = null;
+let boundaryClickHandler = null;
+
 // 状態変更用のセッター関数
 export function setSelectedAreaFeature(value) {
     selectedAreaFeature = value;
@@ -195,16 +200,141 @@ function getPolygonCenter(coordinates) {
     return L.latLng(latSum / count, lngSum / count);
 }
 
+// 頂点数・面積の表示を更新
+function updateVertexUI(feature) {
+    const vertexCountInput = document.getElementById('selectedAreaVertexCount');
+    if (vertexCountInput) vertexCountInput.value = calculateVertexCount(feature);
+
+    const estimatedAreaInput = document.getElementById('selectedAreaEstimatedArea');
+    if (estimatedAreaInput) {
+        const areaSqM = calculatePolygonAreaSqM(feature);
+        estimatedAreaInput.value = toSignificantFigures(areaSqM, 3).toLocaleString();
+    }
+}
+
+// 頂点編集マーカーをすべて削除
+function removeVertexMarkers(map) {
+    vertexMarkers.forEach(m => map.removeLayer(m));
+    vertexMarkers = [];
+    if (boundaryClickLayer && boundaryClickHandler) {
+        boundaryClickLayer.off('click', boundaryClickHandler);
+        boundaryClickLayer = null;
+        boundaryClickHandler = null;
+    }
+}
+
+// 頂点編集マーカーを表示（ドラッグ移動・右クリック削除・境界クリック追加）
+function showVertexMarkers(feature, layer, map) {
+    removeVertexMarkers(map);
+
+    if (!feature || feature.geometry.type !== 'Polygon') return;
+
+    const ring = feature.geometry.coordinates[0];
+    const areaStyle = DEFAULTS.FEATURE_STYLES['area'];
+    const size = areaStyle.vertex.radius * 2;
+
+    for (let i = 0; i < ring.length - 1; i++) {
+        const vertexIndex = i;
+
+        const marker = L.marker([ring[i][1], ring[i][0]], {
+            draggable: true,
+            zIndexOffset: 1000,
+            icon: L.divIcon({
+                className: '',
+                html: `<div style="width:${size}px;height:${size}px;background:#ffff00;border:1px solid #333;border-radius:50%;cursor:move;box-sizing:border-box;"></div>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2]
+            })
+        });
+
+        // ドラッグで頂点を移動
+        marker.on('drag', function(e) {
+            const latlng = e.target.getLatLng();
+            ring[vertexIndex][0] = latlng.lng;
+            ring[vertexIndex][1] = latlng.lat;
+            // 先頭頂点の場合は閉じる点も更新
+            if (vertexIndex === 0) {
+                ring[ring.length - 1][0] = latlng.lng;
+                ring[ring.length - 1][1] = latlng.lat;
+            }
+            refreshLayer(layer, feature);
+            updateVertexUI(feature);
+        });
+
+        // 右クリックで頂点を削除
+        marker.on('contextmenu', function(e) {
+            L.DomEvent.stopPropagation(e);
+            if (ring.length - 1 <= 3) {
+                showMessage('頂点は3個以上必要です', 'warning');
+                return;
+            }
+            ring.splice(vertexIndex, 1);
+            ring[ring.length - 1] = [ring[0][0], ring[0][1]]; // 閉じる点を維持
+            refreshLayer(layer, feature);
+            showVertexMarkers(feature, layer, map);
+            updateVertexUI(feature);
+            showMessage('頂点を削除しました', 'success');
+        });
+
+        marker.addTo(map);
+        vertexMarkers.push(marker);
+    }
+
+    // 境界線クリックで頂点を追加
+    boundaryClickHandler = function(e) {
+        if (selectedAreaFeature !== feature) return;
+
+        const pC = map.latLngToContainerPoint(e.latlng);
+        let minDist = Infinity;
+        let insertIndex = -1;
+        let insertPoint = null;
+
+        for (let i = 0; i < ring.length - 1; i++) {
+            const pA = map.latLngToContainerPoint(L.latLng(ring[i][1], ring[i][0]));
+            const pB = map.latLngToContainerPoint(L.latLng(ring[i + 1][1], ring[i + 1][0]));
+            const dx = pB.x - pA.x;
+            const dy = pB.y - pA.y;
+            const lenSq = dx * dx + dy * dy;
+            const t = lenSq > 0 ? Math.max(0, Math.min(1, ((pC.x - pA.x) * dx + (pC.y - pA.y) * dy) / lenSq)) : 0;
+            const cx = pA.x + t * dx;
+            const cy = pA.y + t * dy;
+            const dist = Math.sqrt((pC.x - cx) ** 2 + (pC.y - cy) ** 2);
+            if (dist < minDist) {
+                minDist = dist;
+                insertIndex = i + 1;
+                insertPoint = map.containerPointToLatLng(L.point(cx, cy));
+            }
+        }
+
+        if (minDist < 10) {
+            ring.splice(insertIndex, 0, [insertPoint.lng, insertPoint.lat]);
+            ring[ring.length - 1] = [ring[0][0], ring[0][1]];
+            refreshLayer(layer, feature);
+            showVertexMarkers(feature, layer, map);
+            updateVertexUI(feature);
+            showMessage('頂点を追加しました', 'success');
+            L.DomEvent.stopPropagation(e);
+        }
+    };
+
+    boundaryClickLayer = layer;
+    layer.on('click', boundaryClickHandler);
+}
+
 // エリア選択時の処理
 export function highlightArea(areaIndex, areaLayerMap, map) {
-    resetAreaHighlight(map);
-
     if (areaIndex === '' || areaIndex === null || areaIndex === undefined) {
+        resetAreaHighlight(map);
         return;
     }
 
     const area = allAreas[areaIndex];
     if (!area) return;
+
+    // 同じエリアが既に選択中の場合はスキップ
+    if (area.feature === selectedAreaFeature) return;
+
+    resetAreaHighlight(map);
 
     setSelectedAreaFeature(area.feature);
 
@@ -216,23 +346,16 @@ export function highlightArea(areaIndex, areaLayerMap, map) {
     // 名称を表示
     document.getElementById('selectedAreaName').value = area.name;
 
-    // 頂点数を表示
-    const vertexCountInput = document.getElementById('selectedAreaVertexCount');
-    if (vertexCountInput) {
-        vertexCountInput.value = calculateVertexCount(area.feature);
-    }
-
-    // 推定面積を表示
-    const estimatedAreaInput = document.getElementById('selectedAreaEstimatedArea');
-    if (estimatedAreaInput) {
-        const areaSqM = calculatePolygonAreaSqM(area.feature);
-        estimatedAreaInput.value = toSignificantFigures(areaSqM, 3).toLocaleString();
-    }
+    // 頂点数・面積を表示
+    updateVertexUI(area.feature);
 
     // ハイライト（水色）
     if (layer.setStyle) {
         layer.setStyle({ fillColor: '#00ffff', color: '#00ffff', weight: 3 });
     }
+
+    // 頂点編集マーカーを表示
+    showVertexMarkers(area.feature, layer, map);
 
     // 移動モードなら重心にマーカーを表示してドラッグ可能にする
     if (isAddMoveAreaMode) {
@@ -367,6 +490,8 @@ export function setupAreaDragMarker(layer, feature, map, areaLayerMap) {
 
 // エリアハイライトのリセット
 export function resetAreaHighlight(map) {
+    removeVertexMarkers(map);
+
     if (centerMarker) {
         map.removeLayer(centerMarker);
         centerMarker = null;
@@ -557,7 +682,7 @@ export function completeAreaCreation(loadedData, areaLayerMap, geoJsonLayer, map
     };
     newAreaFeature.geometry.coordinates[0].forEach((coord, i) => {
         if (i === newAreaFeature.geometry.coordinates[0].length - 1) return;
-        geoJsonLayer.addLayer(L.circleMarker([coord[1], coord[0]], vStyle));
+        geoJsonLayer.addLayer(L.circleMarker([coord[1], coord[0]], { ...vStyle, interactive: false }));
     });
 
     const newArea = {

@@ -305,7 +305,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         outerRing.forEach((coord, i) => {
                             // 閉じるための重複点（最終点）はスキップ
                             if (i === outerRing.length - 1) return;
-                            geoJsonLayer.addLayer(L.circleMarker([coord[1], coord[0]], vStyle));
+                            geoJsonLayer.addLayer(L.circleMarker([coord[1], coord[0]], { ...vStyle, interactive: false }));
                         });
 
                         if (areaLayerMap) {
