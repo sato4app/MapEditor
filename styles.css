@@ -731,13 +731,15 @@ button:hover {
 }
 
 .area-btn {
-    padding: 6px 10px;
+    flex: 1;
+    padding: 4px 4px;
     font-size: 12px;
     border: 2px solid #333;
     border-radius: 4px;
     background-color: white;
     cursor: pointer;
     font-weight: 500;
+    text-align: center;
 }
 
 .area-btn:hover {
@@ -758,14 +760,6 @@ button:hover {
     background-color: #0056b3;
 }
 
-#addAreaBtn,
-#moveAreaBtn {
-    flex: none;
-}
-
-#deleteAreaBtn {
-    flex: none;
-}
 
 .area-drag-marker {
     cursor: move;
