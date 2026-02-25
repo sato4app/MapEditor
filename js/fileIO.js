@@ -282,9 +282,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                         const polygon = L.polygon(latLngs, polygonStyle);
 
-                        let popupContent = `<b>${props.name || 'エリア'}</b>`;
-                        if (props.description) popupContent += `<br>${props.description}`;
-                        polygon.bindPopup(popupContent);
+                        polygon.bindPopup(`<b>${props.name || 'エリア'}</b>`);
 
                         // エリアモードでクリックしたときにドロップダウンと連動
                         polygon.on('click', function(e) {

@@ -508,6 +508,11 @@ if (areaNameInput) {
         AreaEditor.updateAreaDropdown();
         areaSelect.value = currentIndex;
 
+        // 選択中レイヤーのポップアップも更新
+        if (AreaEditor.selectedAreaLayer) {
+            AreaEditor.selectedAreaLayer.bindPopup(`<b>${newName}</b>`);
+        }
+
         showMessage('エリア名を更新しました', 'success');
     });
 }
