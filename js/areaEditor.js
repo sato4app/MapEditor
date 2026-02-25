@@ -90,6 +90,22 @@ export function updateAreaDropdown() {
     }
 }
 
+// ポリゴンの頂点数計算（外周リングの重複点を除いた頂点数）
+function calculateVertexCount(feature) {
+    const geometryType = feature.geometry.type;
+    const coordinates = feature.geometry.coordinates;
+    if (geometryType === 'Polygon') {
+        const ring = coordinates[0];
+        return ring ? ring.length - 1 : 0; // 閉じるための最終点を除く
+    } else if (geometryType === 'MultiPolygon') {
+        return coordinates.reduce((sum, polygon) => {
+            const ring = polygon[0];
+            return sum + (ring ? ring.length - 1 : 0);
+        }, 0);
+    }
+    return 0;
+}
+
 // ポリゴンの面積計算（㎡）
 function calculatePolygonAreaSqM(feature) {
     const geometryType = feature.geometry.type;
@@ -192,6 +208,12 @@ export function highlightArea(areaIndex, areaLayerMap, map) {
 
     // 名称を表示
     document.getElementById('selectedAreaName').value = area.name;
+
+    // 頂点数を表示
+    const vertexCountInput = document.getElementById('selectedAreaVertexCount');
+    if (vertexCountInput) {
+        vertexCountInput.value = calculateVertexCount(area.feature);
+    }
 
     // 推定面積を表示
     const estimatedAreaInput = document.getElementById('selectedAreaEstimatedArea');
@@ -361,6 +383,9 @@ export function resetAreaHighlight(map) {
     setSelectedAreaLayer(null);
     const nameInput = document.getElementById('selectedAreaName');
     if (nameInput) nameInput.value = '';
+
+    const vertexCountInput = document.getElementById('selectedAreaVertexCount');
+    if (vertexCountInput) vertexCountInput.value = '';
 
     const estimatedAreaInput = document.getElementById('selectedAreaEstimatedArea');
     if (estimatedAreaInput) estimatedAreaInput.value = '';
