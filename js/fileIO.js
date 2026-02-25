@@ -516,7 +516,16 @@ export function setupFileExport() {
         const routeCount = parseInt(document.getElementById('routeCount').value) || 0;
         const spotCount = parseInt(document.getElementById('spotCount').value) || 0;
 
-        const dataStr = JSON.stringify(loadedDataInternal, null, 2);
+        // type="route" の LineString は route_waypoint Point に変換済みのため除外
+        const exportData = {
+            ...loadedDataInternal,
+            features: loadedDataInternal.features.filter(f =>
+                !(f.properties && f.properties.type === 'route' &&
+                  f.geometry && f.geometry.type === 'LineString')
+            )
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
         const blob = new Blob([dataStr], { type: 'application/json' });
         const filename = `MapGPS-${getDateString()}_P${pointCount}_R${routeCount}_S${spotCount}.geojson`;
 
