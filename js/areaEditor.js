@@ -106,6 +106,13 @@ function calculateVertexCount(feature) {
     return 0;
 }
 
+// 有効数字N桁に丸める
+function toSignificantFigures(value, sigFigs) {
+    if (value === 0) return 0;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(Math.abs(value))) - (sigFigs - 1));
+    return Math.round(value / magnitude) * magnitude;
+}
+
 // ポリゴンの面積計算（㎡）
 function calculatePolygonAreaSqM(feature) {
     const geometryType = feature.geometry.type;
@@ -219,7 +226,7 @@ export function highlightArea(areaIndex, areaLayerMap, map) {
     const estimatedAreaInput = document.getElementById('selectedAreaEstimatedArea');
     if (estimatedAreaInput) {
         const areaSqM = calculatePolygonAreaSqM(area.feature);
-        estimatedAreaInput.value = Math.round(areaSqM).toLocaleString();
+        estimatedAreaInput.value = toSignificantFigures(areaSqM, 3).toLocaleString();
     }
 
     // ハイライト（水色）
