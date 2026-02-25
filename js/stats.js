@@ -68,7 +68,6 @@ export function updateStats(geoJsonData) {
     const lineBasedRouteCount = countRoutes(geoJsonData);
     const routeCount = lineBasedRouteCount > 0 ? lineBasedRouteCount : waypointRouteIdSet.size;
 
-    document.getElementById('fileCount').value = geoJsonData ? '1' : '0';
     document.getElementById('pointCount').value = pointCount;
     // ルートカウントはLineString/MultiLineStringの本数。無ければ中間点のroute_idユニーク数
     document.getElementById('routeCount').value = routeCount;

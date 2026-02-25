@@ -10,6 +10,12 @@ import { extractAreas, updateAreaDropdown, highlightArea, allAreas } from './are
 // ファイル入出力の状態管理
 let loadedDataInternal = null;
 let lastLoadedFileHandle = null;
+let loadedFileCount = 0;
+
+function updateFileCount() {
+    const el = document.getElementById('fileCount');
+    if (el) el.value = loadedFileCount;
+}
 
 // loadedDataへのアクセサー
 export function getLoadedData() {
@@ -93,6 +99,8 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                 });
 
                 // 統計情報を更新
+                loadedFileCount++;
+                updateFileCount();
                 updateStats(data);
 
                 showMessage(`${newFeatures.length}件のポイントGPSを読み込みました`, 'success');
@@ -454,6 +462,8 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
             updateAreaDropdown();
 
             // 統計情報を更新
+            loadedFileCount++;
+            updateFileCount();
             updateStats(data);
             showMessage(`${features.length}件のデータを読み込みました`, 'success');
 
