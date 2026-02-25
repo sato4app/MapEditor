@@ -49,8 +49,11 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
         if (this.value !== MODES.AREA) {
             AreaEditor.resetAreaHighlight(map);
 
-            if (AreaEditor.isAddMoveAreaMode) {
-                AreaEditor.exitAddMoveAreaMode(map);
+            if (AreaEditor.isAddAreaMode) {
+                AreaEditor.exitAddAreaMode(map);
+            }
+            if (AreaEditor.isMoveAreaMode) {
+                AreaEditor.exitMoveAreaMode(map);
             }
 
             document.getElementById('areaSelect').value = '';
@@ -509,46 +512,66 @@ if (areaNameInput) {
     });
 }
 
-// 追加・移動ボタン
-document.getElementById('addMoveAreaBtn').addEventListener('click', function () {
-    // 既にモードが有効なら解除
-    if (AreaEditor.isAddMoveAreaMode) {
-        AreaEditor.exitAddMoveAreaMode(map);
-        showMessage('追加・移動モードを解除しました', 'success');
+// 追加ボタン（新規エリア作成）
+document.getElementById('addAreaBtn').addEventListener('click', function () {
+    // 既に追加モードなら解除
+    if (AreaEditor.isAddAreaMode) {
+        AreaEditor.exitAddAreaMode(map);
+        showMessage('追加モードを解除しました', 'success');
         return;
     }
 
-    // データ初期化 (if null)
+    // 移動モードが有効なら解除
+    if (AreaEditor.isMoveAreaMode) {
+        AreaEditor.exitMoveAreaMode(map);
+    }
+
+    // データ初期化
     let loadedData = getLoadedData();
     if (!loadedData) {
         loadedData = initData();
     }
 
-    // モード開始
-    AreaEditor.setIsAddMoveAreaMode(true);
+    AreaEditor.setIsAddAreaMode(true);
     this.classList.add('active');
-
-    if (AreaEditor.selectedAreaFeature && AreaEditor.selectedAreaLayer) {
-        // 移動・修正モード
-        AreaEditor.setupAreaDragMarker(AreaEditor.selectedAreaLayer, AreaEditor.selectedAreaFeature, map, areaLayerMap);
-        showMessage('エリアを選択中: 中心マーカーをドラッグして移動できます。\n地図をクリックで新しいエリアを作成開始できます。\nボタンをもう一度クリックで解除', 'success');
-    } else {
-        // 新規作成モード
-        showMessage('地図をクリックしてエリアの頂点を追加してください。（3点以上で始点付近をクリックして完了）\nボタンをもう一度クリックで解除', 'success');
-    }
-
     map.getContainer().style.cursor = 'crosshair';
 
-    // クリックハンドラ
-    const areaHandler = function (e) {
-        if (!AreaEditor.isAddMoveAreaMode) return;
+    showMessage('地図をクリックしてエリアの頂点を追加してください。（3点以上で始点付近をクリックして完了）\nボタンをもう一度クリックで解除', 'success');
 
-        // ポリゴン作成中
+    const areaHandler = function (e) {
+        if (!AreaEditor.isAddAreaMode) return;
         AreaEditor.addAreaVertex(e.latlng, map, loadedData, areaLayerMap, geoJsonLayer);
     };
 
     AreaEditor.setAreaMapClickHandler(areaHandler);
     map.on('click', areaHandler);
+});
+
+// 移動ボタン（選択中エリアの移動）
+document.getElementById('moveAreaBtn').addEventListener('click', function () {
+    // 既に移動モードなら解除
+    if (AreaEditor.isMoveAreaMode) {
+        AreaEditor.exitMoveAreaMode(map);
+        showMessage('移動モードを解除しました', 'success');
+        return;
+    }
+
+    if (!AreaEditor.selectedAreaFeature) {
+        showMessage('移動するエリアを選択してください', 'warning');
+        return;
+    }
+
+    // 追加モードが有効なら解除
+    if (AreaEditor.isAddAreaMode) {
+        AreaEditor.exitAddAreaMode(map);
+    }
+
+    AreaEditor.setIsMoveAreaMode(true);
+    this.classList.add('active');
+    map.getContainer().style.cursor = 'crosshair';
+
+    AreaEditor.setupAreaDragMarker(AreaEditor.selectedAreaLayer, AreaEditor.selectedAreaFeature, map, areaLayerMap);
+    showMessage('中心マーカーをドラッグしてエリアを移動できます。\nボタンをもう一度クリックで解除', 'success');
 });
 
 
@@ -562,8 +585,11 @@ document.getElementById('deleteAreaBtn').addEventListener('click', function () {
     const areaName = AreaEditor.selectedAreaFeature.properties && AreaEditor.selectedAreaFeature.properties.name;
     if (!confirm(`エリア「${areaName}」を削除しますか？`)) return;
 
-    if (AreaEditor.isAddMoveAreaMode) {
-        AreaEditor.exitAddMoveAreaMode(map);
+    if (AreaEditor.isAddAreaMode) {
+        AreaEditor.exitAddAreaMode(map);
+    }
+    if (AreaEditor.isMoveAreaMode) {
+        AreaEditor.exitMoveAreaMode(map);
     }
 
     const data = getLoadedData();

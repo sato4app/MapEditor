@@ -758,7 +758,8 @@ button:hover {
     background-color: #0056b3;
 }
 
-#addMoveAreaBtn {
+#addAreaBtn,
+#moveAreaBtn {
     flex: none;
 }
 

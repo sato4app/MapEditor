@@ -8,7 +8,8 @@ import { updateStats } from './stats.js';
 export let allAreas = [];
 export let selectedAreaFeature = null;
 export let selectedAreaLayer = null;
-export let isAddMoveAreaMode = false;
+export let isAddAreaMode = false;
+export let isMoveAreaMode = false;
 export let areaMapClickHandler = null;
 
 // 描画中の一時データ
@@ -30,8 +31,12 @@ export function setSelectedAreaLayer(value) {
     selectedAreaLayer = value;
 }
 
-export function setIsAddMoveAreaMode(value) {
-    isAddMoveAreaMode = value;
+export function setIsAddAreaMode(value) {
+    isAddAreaMode = value;
+}
+
+export function setIsMoveAreaMode(value) {
+    isMoveAreaMode = value;
 }
 
 export function setAreaMapClickHandler(handler) {
@@ -358,7 +363,7 @@ export function highlightArea(areaIndex, areaLayerMap, map) {
     showVertexMarkers(area.feature, layer, map);
 
     // 移動モードなら重心にマーカーを表示してドラッグ可能にする
-    if (isAddMoveAreaMode) {
+    if (isMoveAreaMode) {
         setupAreaDragMarker(layer, area.feature, map, areaLayerMap);
     }
 }
@@ -523,14 +528,14 @@ export function resetAreaHighlight(map) {
     if (estimatedAreaInput) estimatedAreaInput.value = '';
 }
 
-// エリア追加・移動モードの開始・終了
-export function exitAddMoveAreaMode(map) {
-    if (!isAddMoveAreaMode) return;
+// エリア追加モードの終了
+export function exitAddAreaMode(map) {
+    if (!isAddAreaMode) return;
 
-    setIsAddMoveAreaMode(false);
+    setIsAddAreaMode(false);
 
-    const addMoveBtn = document.getElementById('addMoveAreaBtn');
-    if (addMoveBtn) addMoveBtn.classList.remove('active');
+    const addBtn = document.getElementById('addAreaBtn');
+    if (addBtn) addBtn.classList.remove('active');
 
     if (areaMapClickHandler) {
         map.off('click', areaMapClickHandler);
@@ -544,21 +549,24 @@ export function exitAddMoveAreaMode(map) {
     }
     drawingCoordinates = [];
 
-    // マーカー削除
+    map.getContainer().style.cursor = '';
+}
+
+// エリア移動モードの終了
+export function exitMoveAreaMode(map) {
+    if (!isMoveAreaMode) return;
+
+    setIsMoveAreaMode(false);
+
+    const moveBtn = document.getElementById('moveAreaBtn');
+    if (moveBtn) moveBtn.classList.remove('active');
+
     if (centerMarker) {
         map.removeLayer(centerMarker);
         centerMarker = null;
     }
 
     map.getContainer().style.cursor = '';
-
-    // 選択状態は維持したいが、マーカーが消えるので再選択（ハイライト）が必要？
-    // highlightAreaはcenterMarkerを再作成する。
-    // exitAddMoveAreaModeはモード終了時。
-    // モード終了時はcenterMarkerはいらない。
-    // しかしhighlightAreaはselectedAreaLayerを持っている。
-    // リセットしたい場合は resetAreaHighlightを呼ぶべきだが、
-    // ここでは「編集モードだけ終わる」ので、選択はそのままでいい。
 }
 
 // エリアの追加（頂点追加）
