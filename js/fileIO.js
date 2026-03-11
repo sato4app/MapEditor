@@ -124,6 +124,71 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
     });
 }
 
+// 読み込み種別選択モーダルを表示し、選択結果をPromiseで返す
+function showImportTypeModal(features) {
+    return new Promise((resolve) => {
+        // 種別ごとの件数カウント
+        const counts = { point: 0, route: 0, spot: 0, area: 0 };
+        features.forEach(f => {
+            if (!f.geometry) return;
+            const type = f.properties && f.properties.type;
+            const geomType = f.geometry.type;
+            if (geomType === 'LineString') {
+                counts.route++;
+            } else if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
+                counts.area++;
+            } else if (geomType === 'Point') {
+                if (type === 'spot') counts.spot++;
+                else if (type === 'point' || type === 'ポイントGPS') counts.point++;
+            }
+        });
+
+        // 件数表示を更新
+        document.getElementById('importPointCount').textContent = `${counts.point}点`;
+        document.getElementById('importRouteCount').textContent = `${counts.route}本`;
+        document.getElementById('importSpotCount').textContent = `${counts.spot}個`;
+        document.getElementById('importAreaCount').textContent = `${counts.area}件`;
+
+        // 0件の場合はチェックをオフ、1件以上はオン
+        document.getElementById('importPoint').checked = counts.point > 0;
+        document.getElementById('importRoute').checked = counts.route > 0;
+        document.getElementById('importSpot').checked = counts.spot > 0;
+        document.getElementById('importArea').checked = counts.area > 0;
+
+        // モーダルを表示
+        const modal = document.getElementById('geoJsonImportModal');
+        modal.style.display = 'flex';
+
+        const confirmBtn = document.getElementById('importConfirmBtn');
+        const cancelBtn = document.getElementById('importCancelBtn');
+
+        const cleanup = () => {
+            modal.style.display = 'none';
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+        };
+
+        const onConfirm = () => {
+            const selection = {
+                point: document.getElementById('importPoint').checked,
+                route: document.getElementById('importRoute').checked,
+                spot: document.getElementById('importSpot').checked,
+                area: document.getElementById('importArea').checked
+            };
+            cleanup();
+            resolve(selection);
+        };
+
+        const onCancel = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+    });
+}
+
 // GeoJSONファイルの読み込み
 export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap) {
     // ボタンではなく、隠しファイル入力要素のchangeイベントを監視
@@ -140,7 +205,26 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 throw new Error('有効なGeoJSONフォーマットではありません');
             }
 
-            const features = json.features;
+            const allFeatures = json.features;
+
+            // 読み込み種別選択モーダルを表示
+            const selection = await showImportTypeModal(allFeatures);
+            if (!selection) return; // キャンセル
+
+            // 選択に応じてフィーチャーをフィルタリング
+            const features = allFeatures.filter(f => {
+                if (!f.geometry) return false;
+                const type = f.properties && f.properties.type;
+                const geomType = f.geometry.type;
+                if (geomType === 'LineString') return selection.route;
+                if (geomType === 'Polygon' || geomType === 'MultiPolygon') return selection.area;
+                if (geomType === 'Point') {
+                    if (type === 'spot') return selection.spot;
+                    if (type === 'route_waypoint') return selection.route;
+                    if (type === 'point' || type === 'ポイントGPS') return selection.point;
+                }
+                return true;
+            });
 
             // データ初期化 (追加モード)
             let data = initData();

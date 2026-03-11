@@ -193,6 +193,45 @@
         </div>
     </div>
 
+    <!-- GeoJSON読み込み種別選択モーダル -->
+    <div id="geoJsonImportModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-title">読み込む種別を選択</div>
+            <div class="modal-row">
+                <label class="modal-check-label">
+                    <input type="checkbox" id="importPoint" checked>
+                    <span>ポイント</span>
+                </label>
+                <span id="importPointCount" class="modal-count">0点</span>
+            </div>
+            <div class="modal-row">
+                <label class="modal-check-label">
+                    <input type="checkbox" id="importRoute" checked>
+                    <span>ルート</span>
+                </label>
+                <span id="importRouteCount" class="modal-count">0本</span>
+            </div>
+            <div class="modal-row">
+                <label class="modal-check-label">
+                    <input type="checkbox" id="importSpot" checked>
+                    <span>スポット</span>
+                </label>
+                <span id="importSpotCount" class="modal-count">0個</span>
+            </div>
+            <div class="modal-row">
+                <label class="modal-check-label">
+                    <input type="checkbox" id="importArea" checked>
+                    <span>エリア</span>
+                </label>
+                <span id="importAreaCount" class="modal-count">0件</span>
+            </div>
+            <div class="modal-actions">
+                <button id="importConfirmBtn" class="modal-btn modal-btn-primary">読み込む</button>
+                <button id="importCancelBtn" class="modal-btn">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module" src="js/app.js"></script>
