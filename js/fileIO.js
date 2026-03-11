@@ -452,56 +452,16 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 );
                 if (alreadyHasWaypoints) return;
 
-                const startId = match[1];
-                const endId = match[2];
                 const coords = f.geometry.coordinates;
                 if (coords.length < 2) return;
 
-                const gpsStyle = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
                 const wpStyle = DEFAULTS.FEATURE_STYLES['route_waypoint'];
 
-                // 開始ポイントを ポイントGPS として登録（まだなければ）
-                const startExists = data.features.some(feat =>
-                    feat.properties && feat.properties.type === 'ポイントGPS' && feat.properties.id === startId
-                );
-                if (!startExists) {
-                    const [sLng, sLat] = coords[0];
-                    const startFeature = {
-                        type: 'Feature',
-                        properties: { type: 'ポイントGPS', id: startId, name: startId },
-                        geometry: { type: 'Point', coordinates: [sLng, sLat] }
-                    };
-                    data.features.push(startFeature);
-                    const marker = L.circleMarker([sLat, sLng], gpsStyle);
-                    marker.bindPopup(`<b>${startId}</b>`);
-                    geoJsonLayer.addLayer(marker);
-                    if (markerMap) markerMap.set(startId, marker);
-                }
-
-                // 終了ポイントを ポイントGPS として登録（まだなければ）
-                const lastCoord = coords[coords.length - 1];
-                const endExists = data.features.some(feat =>
-                    feat.properties && feat.properties.type === 'ポイントGPS' && feat.properties.id === endId
-                );
-                if (!endExists) {
-                    const [eLng, eLat] = lastCoord;
-                    const endFeature = {
-                        type: 'Feature',
-                        properties: { type: 'ポイントGPS', id: endId, name: endId },
-                        geometry: { type: 'Point', coordinates: [eLng, eLat] }
-                    };
-                    data.features.push(endFeature);
-                    const marker = L.circleMarker([eLat, eLng], gpsStyle);
-                    marker.bindPopup(`<b>${endId}</b>`);
-                    geoJsonLayer.addLayer(marker);
-                    if (markerMap) markerMap.set(endId, marker);
-                }
-
-                // 中間座標を route_waypoint として登録
-                const middleCoords = coords.slice(1, -1);
+                // 全座標を中間点(route_waypoint)として登録
+                // 開始・終了ポイントはLineStringに含まれず、別途ポイントGPSフィーチャーとして存在する
                 const waypointMarkers = [];
 
-                middleCoords.forEach((coord, index) => {
+                coords.forEach((coord, index) => {
                     const [wLng, wLat] = coord;
                     const wpFeature = {
                         type: 'Feature',
