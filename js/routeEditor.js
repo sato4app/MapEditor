@@ -442,6 +442,7 @@ export function redrawWaypointMarkers(routeId, loadedData, markerMap, geoJsonLay
         if (wp.geometry && wp.geometry.coordinates) {
             const [lng, lat] = wp.geometry.coordinates;
             const marker = L.marker([lat, lng], {
+                draggable: true,
                 icon: L.divIcon({
                     className: 'diamond-marker',
                     html: `<div style="width: ${style.radius * 2}px; height: ${style.radius * 2}px; background-color: ${markerColor}; transform: rotate(45deg); opacity: ${style.fillOpacity};"></div>`,
@@ -449,6 +450,8 @@ export function redrawWaypointMarkers(routeId, loadedData, markerMap, geoJsonLay
                     iconAnchor: [style.radius, style.radius]
                 })
             }).addTo(geoJsonLayer);
+            // 追加・移動モード以外ではドラッグを無効化
+            if (marker.dragging) marker.dragging.disable();
 
             newMarkers.push(marker);
         }
@@ -594,87 +597,36 @@ export function optimizeRoute(routeId, showMessages = true, loadedData, markerMa
     }
 }
 
-// 中間点をクリック可能にする（追加・移動モード用）
+// 中間点をドラッグ可能にする（追加・移動モード用）
 export function makeWaypointsClickableForAddMove(routeId, loadedData, markerMap, map) {
     const waypointMarkers = markerMap.get(routeId);
     if (!Array.isArray(waypointMarkers)) return;
 
     waypointMarkers.forEach((marker, index) => {
-        if (marker && marker.getElement) {
-            const element = marker.getElement();
-            if (element) {
-                element.style.cursor = 'pointer';
+        marker.off('drag');
+        marker.off('dragend');
+        marker.off('click');
 
-                // 既存のイベントハンドラーを削除してから新しいものを追加
-                marker.off('click');
-                marker.off('drag');
-                marker.off('dragend');
+        if (marker.dragging) marker.dragging.enable();
 
-                marker.on('click', function(e) {
-                    if (!state.isAddMoveMode) return;
+        const el = marker.getElement && marker.getElement();
+        if (el) el.style.cursor = 'move';
 
-                    L.DomEvent.stopPropagation(e);
+        marker.on('drag', function () {
+            const newLatLng = marker.getLatLng();
+            updateWaypointCoordinates(routeId, index, newLatLng, loadedData);
+            redrawRouteLine(routeId, loadedData, map);
+        });
 
-                    if (state.draggableMarkers.length > 0) {
-                        state.draggableMarkers.forEach(m => {
-                            if (m && m.dragging) {
-                                m.dragging.disable();
-                            }
-                            const el = m.getElement && m.getElement();
-                            if (el) {
-                                el.style.cursor = 'pointer';
-                            }
-                        });
-                        state.draggableMarkers = [];
-                    }
-
-                    element.style.cursor = 'move';
-                    marker.dragging = marker.dragging || new L.Handler.MarkerDrag(marker);
-                    marker.dragging.enable();
-
-                    marker.off('drag');
-                    marker.on('drag', function(e) {
-                        const newLatLng = marker.getLatLng();
-                        updateWaypointCoordinates(routeId, index, newLatLng, loadedData);
-                        redrawRouteLine(routeId, loadedData, map);
-                    });
-
-                    marker.off('dragend');
-                    marker.on('dragend', function(e) {
-                        const newLatLng = marker.getLatLng();
-                        updateWaypointCoordinates(routeId, index, newLatLng, loadedData);
-
-                        // ドラッグを無効化してイベントをクリア
-                        if (marker.dragging) {
-                            marker.dragging.disable();
-                        }
-                        marker.off('drag');
-                        marker.off('dragend');
-                        marker.off('click');
-
-                        // カーソルをリセット
-                        const el = marker.getElement && marker.getElement();
-                        if (el) {
-                            el.style.cursor = '';
-                        }
-
-                        // ドラッグ可能マーカーをクリア（古いマーカーへの参照を削除）
-                        state.draggableMarkers = [];
-
-                        // ルートを最適化（この中でマーカーが再作成される）
-                        optimizeRoute(routeId, false, loadedData, markerMap);
-                        redrawRouteLine(routeId, loadedData, map);
-
-                        // マーカーが再描画された後、再度クリック可能にする
-                        if (state.isAddMoveMode) {
-                            makeWaypointsClickableForAddMove(routeId, loadedData, markerMap, map);
-                        }
-                    });
-
-                    state.draggableMarkers = [...state.draggableMarkers, marker];
-                });
+        marker.on('dragend', function () {
+            const newLatLng = marker.getLatLng();
+            updateWaypointCoordinates(routeId, index, newLatLng, loadedData);
+            optimizeRoute(routeId, false, loadedData, markerMap);
+            redrawRouteLine(routeId, loadedData, map);
+            if (state.isAddMoveMode) {
+                makeWaypointsClickableForAddMove(routeId, loadedData, markerMap, map);
             }
-        }
+        });
     });
 }
 
