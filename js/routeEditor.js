@@ -9,6 +9,7 @@ export const state = {
     allRoutes: [],
     selectedRouteId: null,
     selectedRouteLine: null,
+    routeLineMap: new Map(), // routeId -> 背景ポリライン (geoJsonLayerに追加したもの)
     isAddMoveMode: false,
     isDeleteMode: false,
     mapClickHandler: null,
@@ -397,6 +398,12 @@ export function redrawRouteLine(routeId, loadedData, map) {
             color: '#ef454a',
             weight: 2
         }).addTo(map);
+
+        // 背景ポリライン（fileIO.js で geoJsonLayer に追加したもの）も更新
+        const bgLine = state.routeLineMap.get(routeId);
+        if (bgLine) {
+            bgLine.setLatLngs(coordinates);
+        }
     }
 }
 

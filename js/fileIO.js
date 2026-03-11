@@ -3,7 +3,7 @@
 import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString } from './stats.js';
-import { extractPointsAndRoutes, updateDropdowns } from './routeEditor.js';
+import { extractPointsAndRoutes, updateDropdowns, state as routeEditorState } from './routeEditor.js';
 import { extractSpots, updateSpotDropdown, highlightSpot, allSpots } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas } from './areaEditor.js';
 
@@ -289,6 +289,8 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         if (props.description) popupContent += `<br>${props.description}`;
                         line.bindPopup(popupContent);
                         geoJsonLayer.addLayer(line);
+                        // 背景ポリラインを routeLineMap に登録（waypoint削除時に再描画できるよう）
+                        routeEditorState.routeLineMap.set(routeId, line);
                     } else {
                         // 非編集用ルート: 全ての座標に菱形マーカーを表示（従来動作）
                         latLngs.forEach((latLng, index) => {
