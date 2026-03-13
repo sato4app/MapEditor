@@ -207,10 +207,11 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
     const startId = match[1];
     const endId = match[2];
 
-    // type='point' を優先、なければ type='ポイントGPS' にフォールバック
+    // type='point' を優先、なければ type='ポイントGPS' または type='spot' にフォールバック
     function findPointById(id) {
         return loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === id)
-            || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === id);
+            || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === id)
+            || loadedData.features.find(f => f.properties && f.properties.type === 'spot' && f.properties.id === id);
     }
 
     const startFeature = findPointById(startId);
@@ -273,12 +274,15 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
 // 全ルートの背景ポリラインを初期化（選択状態によらず常に表示）
 export function initAllRouteLines(loadedData, geoJsonLayer) {
     state.allRoutes.forEach(({ routeId }) => {
-        if (state.routeLineMap.has(routeId)) return; // 既存のものはスキップ
         const coordinates = getCoordinatesFromGeoJSON(routeId, loadedData);
         if (coordinates && coordinates.length >= 2) {
-            const line = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
-            geoJsonLayer.addLayer(line);
-            state.routeLineMap.set(routeId, line);
+            if (state.routeLineMap.has(routeId)) {
+                state.routeLineMap.get(routeId).setLatLngs(coordinates);
+            } else {
+                const line = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
+                geoJsonLayer.addLayer(line);
+                state.routeLineMap.set(routeId, line);
+            }
         }
     });
 }
@@ -575,11 +579,13 @@ export function optimizeRoute(routeId, showMessages = true, loadedData, markerMa
     const startId = match[1];
     const endId = match[2];
 
-    // type='point' を優先、なければ type='ポイントGPS' にフォールバック
+    // type='point' を優先、なければ type='ポイントGPS' または type='spot' にフォールバック
     const startFeature = loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === startId)
-        || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === startId);
+        || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === startId)
+        || loadedData.features.find(f => f.properties && f.properties.type === 'spot' && f.properties.id === startId);
     const endFeature = loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === endId)
-        || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === endId);
+        || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === endId)
+        || loadedData.features.find(f => f.properties && f.properties.type === 'spot' && f.properties.id === endId);
 
     if (!startFeature || !endFeature) {
         if (showMessages) {
