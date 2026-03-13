@@ -116,6 +116,28 @@ function calculateVertexCount(feature) {
     return 0;
 }
 
+// エリア中央ラベルのテキストを生成
+function formatAreaLabelContent(feature) {
+    const name = (feature.properties && feature.properties.name) || 'エリア';
+    const areaSqM = calculatePolygonAreaSqM(feature);
+    const rounded = toSignificantFigures(areaSqM, 3);
+    return `${name}<br><span style="font-size:10px">（約${rounded.toLocaleString()}㎡）</span>`;
+}
+
+// エリア中央にラベルを表示（永続トゥールチップ）
+export function bindAreaLabel(feature, layer) {
+    const content = formatAreaLabelContent(feature);
+    if (layer.getTooltip()) {
+        layer.setTooltipContent(content);
+    } else {
+        layer.bindTooltip(content, {
+            permanent: true,
+            direction: 'center',
+            className: 'area-center-label'
+        });
+    }
+}
+
 // 有効数字N桁に丸める
 function toSignificantFigures(value, sigFigs) {
     if (value === 0) return 0;
@@ -264,6 +286,7 @@ function showVertexMarkers(feature, layer, map) {
             }
             refreshLayer(layer, feature);
             updateVertexUI(feature);
+            bindAreaLabel(feature, layer);
         });
 
         // 右クリックで頂点を削除
@@ -278,6 +301,7 @@ function showVertexMarkers(feature, layer, map) {
             refreshLayer(layer, feature);
             showVertexMarkers(feature, layer, map);
             updateVertexUI(feature);
+            bindAreaLabel(feature, layer);
             showMessage('頂点を削除しました', 'success');
         });
 
@@ -317,6 +341,7 @@ function showVertexMarkers(feature, layer, map) {
             refreshLayer(layer, feature);
             showVertexMarkers(feature, layer, map);
             updateVertexUI(feature);
+            bindAreaLabel(feature, layer);
             showMessage('頂点を追加しました', 'success');
             L.DomEvent.stopPropagation(e);
         }
@@ -484,6 +509,7 @@ export function setupAreaDragMarker(layer, feature, map, areaLayerMap) {
 
         updateGeometryCoordinates(feature, latDiff, lngDiff);
         refreshLayer(layer, feature);
+        bindAreaLabel(feature, layer);
 
         dragStartLatLng = currentLatLng;
     });
@@ -679,6 +705,9 @@ export function completeAreaCreation(loadedData, areaLayerMap, geoJsonLayer, map
 
     // mapCore/fileIOで使われている feature -> layer マップに登録
     areaLayerMap.set(newAreaFeature, actualLayer);
+
+    // エリア中央ラベルを表示
+    bindAreaLabel(newAreaFeature, actualLayer);
 
     const newArea = {
         name: newAreaName,

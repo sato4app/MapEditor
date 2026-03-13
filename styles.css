@@ -765,6 +765,22 @@ button:hover {
     cursor: move;
 }
 
+/* エリア中央ラベル */
+.area-center-label {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.area-center-label::before {
+    display: none;
+}
+
 /* カスタムマーカー */
 .custom-div-icon {
     background: transparent;

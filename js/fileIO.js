@@ -5,7 +5,7 @@ import { showMessage } from './message.js';
 import { updateStats, getDateString } from './stats.js';
 import { extractPointsAndRoutes, updateDropdowns, state as routeEditorState } from './routeEditor.js';
 import { extractSpots, updateSpotDropdown, highlightSpot, allSpots } from './spotEditor.js';
-import { extractAreas, updateAreaDropdown, highlightArea, allAreas } from './areaEditor.js';
+import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 
 // ファイル入出力の状態管理
 let loadedDataInternal = null;
@@ -384,6 +384,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         });
 
                         geoJsonLayer.addLayer(polygon);
+                        bindAreaLabel(f, polygon);
 
                         if (areaLayerMap) {
                             areaLayerMap.set(f, polygon);
