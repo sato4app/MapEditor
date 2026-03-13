@@ -31,15 +31,15 @@ export function extractPointsAndRoutes(geoJsonData) {
         const featureType = feature.properties && feature.properties.type;
         const geometryType = feature.geometry && feature.geometry.type;
 
-        // ポイントGPSを収集
-        if (geometryType === 'Point' && featureType === 'ポイントGPS') {
+        // ポイントGPS / point を収集
+        if (geometryType === 'Point' && (featureType === 'ポイントGPS' || featureType === 'point')) {
             const pointId = feature.properties && feature.properties.id;
             if (pointId) {
                 state.allPoints.push(pointId);
             }
         }
 
-        // ルート中間点からroute_idを収集
+        // ルート中間点(Point)からroute_idを収集
         if (geometryType === 'Point' && featureType === 'route_waypoint') {
             const routeId = feature.properties && feature.properties.route_id;
             if (routeId) {
@@ -47,8 +47,16 @@ export function extractPointsAndRoutes(geoJsonData) {
             }
         }
 
-        // LineString ルート (type='route') からも route_id を収集（GeoReferencer形式互換）
+        // LineString ルート (type='route') からも route_id を収集
         if (geometryType === 'LineString' && featureType === 'route') {
+            const routeId = feature.properties && feature.properties.id;
+            if (routeId) {
+                routeIdSet.add(routeId);
+            }
+        }
+
+        // LineString ルート (type='route_waypoint') からも route_id を収集（GeoReferencer形式）
+        if (geometryType === 'LineString' && featureType === 'route_waypoint') {
             const routeId = feature.properties && feature.properties.id;
             if (routeId) {
                 routeIdSet.add(routeId);
@@ -225,6 +233,20 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
             coordinates.push([lat, lng]);
         }
     });
+
+    // フォールバック: route_waypoint Point がない場合、type='route_waypoint' LineString の座標を中間点として使用（GeoReferencer形式）
+    if (waypoints.length === 0) {
+        const waypointLine = loadedData.features.find(f =>
+            f.properties && f.properties.type === 'route_waypoint' &&
+            f.properties.id === routeId &&
+            f.geometry && f.geometry.type === 'LineString'
+        );
+        if (waypointLine) {
+            waypointLine.geometry.coordinates.forEach(coord => {
+                coordinates.push([coord[1], coord[0]]);
+            });
+        }
+    }
 
     const endFeature = findPointById(endId);
     if (endFeature && endFeature.geometry && endFeature.geometry.coordinates) {
