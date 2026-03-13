@@ -248,6 +248,19 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
     return null;
 }
 
+// 全ルートの背景ポリラインを初期化（選択状態によらず常に表示）
+export function initAllRouteLines(loadedData, geoJsonLayer) {
+    state.allRoutes.forEach(({ routeId }) => {
+        if (state.routeLineMap.has(routeId)) return; // 既存のものはスキップ
+        const coordinates = getCoordinatesFromGeoJSON(routeId, loadedData);
+        if (coordinates && coordinates.length >= 2) {
+            const line = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
+            geoJsonLayer.addLayer(line);
+            state.routeLineMap.set(routeId, line);
+        }
+    });
+}
+
 // ルートハイライト
 export function highlightRoute(routeId, loadedData, markerMap, map) {
     resetRouteHighlight(markerMap, map);

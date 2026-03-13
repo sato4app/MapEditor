@@ -3,7 +3,7 @@
 import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString } from './stats.js';
-import { extractPointsAndRoutes, updateDropdowns, state as routeEditorState } from './routeEditor.js';
+import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, state as routeEditorState } from './routeEditor.js';
 import { extractSpots, updateSpotDropdown, highlightSpot, allSpots } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 
@@ -497,6 +497,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
             // ルート編集ドロップダウンを更新（GeoJSON読み込み後に選択可能にする）
             extractPointsAndRoutes(data);
             updateDropdowns(data);
+            initAllRouteLines(data, geoJsonLayer);
 
             // スポット編集ドロップダウンを更新
             extractSpots(data);
