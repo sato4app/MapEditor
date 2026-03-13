@@ -207,11 +207,10 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
     const startId = match[1];
     const endId = match[2];
 
-    // type='point' を優先、なければ type='ポイントGPS' または type='spot' にフォールバック
+    // type='ポイントGPS' を優先、なければ type='point' にフォールバック
     function findPointById(id) {
-        return loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === id)
-            || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === id)
-            || loadedData.features.find(f => f.properties && f.properties.type === 'spot' && f.properties.id === id);
+        return loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === id)
+            || loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === id);
     }
 
     const startFeature = findPointById(startId);
@@ -561,13 +560,11 @@ export function optimizeRoute(routeId, showMessages = true, loadedData, markerMa
     const startId = match[1];
     const endId = match[2];
 
-    // type='point' を優先、なければ type='ポイントGPS' または type='spot' にフォールバック
-    const startFeature = loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === startId)
-        || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === startId)
-        || loadedData.features.find(f => f.properties && f.properties.type === 'spot' && f.properties.id === startId);
-    const endFeature = loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === endId)
-        || loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === endId)
-        || loadedData.features.find(f => f.properties && f.properties.type === 'spot' && f.properties.id === endId);
+    // type='ポイントGPS' を優先、なければ type='point' にフォールバック
+    const startFeature = loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === startId)
+        || loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === startId);
+    const endFeature = loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === endId)
+        || loadedData.features.find(f => f.properties && f.properties.type === 'point' && f.properties.id === endId);
 
     if (!startFeature || !endFeature) {
         if (showMessages) {
