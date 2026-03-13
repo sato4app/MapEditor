@@ -302,7 +302,7 @@ document.getElementById('clearRouteBtn').addEventListener('click', async functio
 // リセットボタン
 document.getElementById('resetDropdownBtn').addEventListener('click', function () {
     // ハイライトをリセット
-    RouteEditor.resetRouteHighlight(markerMap, map);
+    RouteEditor.resetRouteHighlight(markerMap, map, getLoadedData());
 
     document.getElementById('routeStart').value = '';
     document.getElementById('routeEnd').value = '';

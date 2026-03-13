@@ -289,7 +289,7 @@ export function initAllRouteLines(loadedData, geoJsonLayer) {
 
 // ルートハイライト
 export function highlightRoute(routeId, loadedData, markerMap, map) {
-    resetRouteHighlight(markerMap, map);
+    resetRouteHighlight(markerMap, map, loadedData);
 
     if (!routeId) return;
 
@@ -311,20 +311,8 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
         endMarker.setStyle({ fillColor: '#ff0000', color: '#ff0000' });
     }
 
-    const waypointMarkers = markerMap.get(routeId);
-    if (Array.isArray(waypointMarkers)) {
-        waypointMarkers.forEach(marker => {
-            if (marker && marker.getElement) {
-                const element = marker.getElement();
-                if (element) {
-                    const div = element.querySelector('div');
-                    if (div) {
-                        div.style.backgroundColor = '#ef454a';
-                    }
-                }
-            }
-        });
-    }
+    // 中間点マーカーをサイズ拡大（radius=3）・色変更して再描画
+    redrawWaypointMarkers(routeId, loadedData, markerMap, window.geoJsonLayer);
 
     const coordinates = getCoordinatesFromGeoJSON(routeId, loadedData);
     if (coordinates) {
@@ -336,10 +324,12 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
 }
 
 // ルートハイライトのリセット
-export function resetRouteHighlight(markerMap, map) {
+export function resetRouteHighlight(markerMap, map, loadedData) {
     if (!state.selectedRouteId) return;
 
-    const match = state.selectedRouteId.match(/^route_(.+)_to_(.+)$/);
+    const prevRouteId = state.selectedRouteId;
+
+    const match = prevRouteId.match(/^route_(.+)_to_(.+)$/);
     if (match) {
         const startId = match[1];
         const endId = match[2];
@@ -355,27 +345,17 @@ export function resetRouteHighlight(markerMap, map) {
         }
     }
 
-    const waypointMarkers = markerMap.get(state.selectedRouteId);
-    if (Array.isArray(waypointMarkers)) {
-        waypointMarkers.forEach(marker => {
-            if (marker && marker.getElement) {
-                const element = marker.getElement();
-                if (element) {
-                    const div = element.querySelector('div');
-                    if (div) {
-                        div.style.backgroundColor = '#f58220';
-                    }
-                }
-            }
-        });
-    }
-
     if (state.selectedRouteLine) {
         map.removeLayer(state.selectedRouteLine);
         state.selectedRouteLine = null;
     }
 
     state.selectedRouteId = null;
+
+    // 中間点マーカーをデフォルトサイズ・色に戻す
+    if (loadedData && window.geoJsonLayer) {
+        redrawWaypointMarkers(prevRouteId, loadedData, markerMap, window.geoJsonLayer);
+    }
 }
 
 // 中間点を追加
@@ -476,8 +456,10 @@ export function redrawWaypointMarkers(routeId, loadedData, markerMap, geoJsonLay
 
     const isSelected = state.selectedRouteId === routeId;
     const markerColor = isSelected ? '#ef454a' : '#f58220';
-    const newMarkers = [];
     const style = DEFAULTS.FEATURE_STYLES['route_waypoint'];
+    const radius = isSelected ? 3 : style.radius; // 選択中は radius=3 (6px)、それ以外はデフォルト (2.5px)
+    const markerPx = radius * 2;
+    const newMarkers = [];
 
     waypoints.forEach(wp => {
         if (wp.geometry && wp.geometry.coordinates) {
@@ -486,9 +468,9 @@ export function redrawWaypointMarkers(routeId, loadedData, markerMap, geoJsonLay
                 draggable: true,
                 icon: L.divIcon({
                     className: 'diamond-marker',
-                    html: `<div style="width: ${style.radius * 2}px; height: ${style.radius * 2}px; background-color: ${markerColor}; transform: rotate(45deg); opacity: ${style.fillOpacity};"></div>`,
-                    iconSize: [style.radius * 2, style.radius * 2],
-                    iconAnchor: [style.radius, style.radius]
+                    html: `<div style="width: ${markerPx}px; height: ${markerPx}px; background-color: ${markerColor}; transform: rotate(45deg); opacity: ${style.fillOpacity};"></div>`,
+                    iconSize: [markerPx, markerPx],
+                    iconAnchor: [radius, radius]
                 })
             }).addTo(geoJsonLayer);
             // 追加・移動モード以外ではドラッグを無効化
