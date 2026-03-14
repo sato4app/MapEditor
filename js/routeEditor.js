@@ -196,6 +196,13 @@ export function updateRoutePathDropdown(loadedData) {
     }
 }
 
+// ポイントIDからフィーチャーを取得（ポイントGPS優先）
+function getPointFeature(id, loadedData) {
+    if (!loadedData || !loadedData.features) return null;
+    return loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && (f.properties.id === id || f.properties.pointId === id))
+        || loadedData.features.find(f => f.properties && f.properties.type === 'point' && (f.properties.id === id || f.properties.pointId === id));
+}
+
 // GeoJSONから座標を取得
 export function getCoordinatesFromGeoJSON(routeId, loadedData) {
     if (!loadedData || !loadedData.features) return null;
@@ -303,11 +310,17 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
     const startMarker = markerMap.get(startId);
     const endMarker = markerMap.get(endId);
 
+    // ポイントGPSはライム、geojsonポイントはピンクでハイライト
+    const startFeature = getPointFeature(startId, loadedData);
+    const endFeature = getPointFeature(endId, loadedData);
+    const startColor = startFeature && startFeature.properties.type === 'ポイントGPS' ? '#00ff00' : '#ff69b4';
+    const endColor = endFeature && endFeature.properties.type === 'ポイントGPS' ? '#00ff00' : '#ff69b4';
+
     if (startMarker && startMarker.setStyle) {
-        startMarker.setStyle({ fillColor: '#ff0000', color: '#ff0000' });
+        startMarker.setStyle({ fillColor: startColor, color: startColor });
     }
     if (endMarker && endMarker.setStyle) {
-        endMarker.setStyle({ fillColor: '#ff0000', color: '#ff0000' });
+        endMarker.setStyle({ fillColor: endColor, color: endColor });
     }
 
     // 中間点マーカーをサイズ拡大（radius=3）・色変更して再描画
@@ -336,11 +349,21 @@ export function resetRouteHighlight(markerMap, map, loadedData) {
         const startMarker = markerMap.get(startId);
         const endMarker = markerMap.get(endId);
 
+        // タイプに応じたデフォルトスタイルに戻す
+        const startFeature = loadedData ? getPointFeature(startId, loadedData) : null;
+        const endFeature = loadedData ? getPointFeature(endId, loadedData) : null;
+        const startDefaultStyle = (startFeature && startFeature.properties.type === 'point')
+            ? DEFAULTS.FEATURE_STYLES['point']
+            : DEFAULTS.FEATURE_STYLES['ポイントGPS'];
+        const endDefaultStyle = (endFeature && endFeature.properties.type === 'point')
+            ? DEFAULTS.FEATURE_STYLES['point']
+            : DEFAULTS.FEATURE_STYLES['ポイントGPS'];
+
         if (startMarker && startMarker.setStyle) {
-            startMarker.setStyle(DEFAULTS.FEATURE_STYLES['ポイントGPS']);
+            startMarker.setStyle(startDefaultStyle);
         }
         if (endMarker && endMarker.setStyle) {
-            endMarker.setStyle(DEFAULTS.FEATURE_STYLES['ポイントGPS']);
+            endMarker.setStyle(endDefaultStyle);
         }
     }
 
