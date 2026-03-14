@@ -97,11 +97,19 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
 
 // 絞り込みドロップダウンの変更イベントリスナー
 document.getElementById('routeStart').addEventListener('change', function () {
+    const prevRoute = document.getElementById('routePath').value;
     RouteEditor.updateRouteLongDropdown(getLoadedData());
+    if (prevRoute && document.getElementById('routePath').value !== prevRoute) {
+        RouteEditor.resetRouteHighlight(markerMap, map, getLoadedData());
+    }
 });
 
 document.getElementById('routeEnd').addEventListener('change', function () {
+    const prevRoute = document.getElementById('routePath').value;
     RouteEditor.updateRoutePathDropdown(getLoadedData());
+    if (prevRoute && document.getElementById('routePath').value !== prevRoute) {
+        RouteEditor.resetRouteHighlight(markerMap, map, getLoadedData());
+    }
 });
 
 // route-dropdown-fullの変更イベントリスナー（ルートハイライト）

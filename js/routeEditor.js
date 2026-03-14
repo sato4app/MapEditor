@@ -144,13 +144,8 @@ export function updateRouteLongDropdown(loadedData) {
         routeEndSelect.value = previousEndSelection;
     }
 
-    const routePathSelect = document.getElementById('routePath');
-    const previousSelection = routePathSelect.value;
     updateRoutePathDropdown(loadedData);
 
-    if (previousSelection && routePathSelect.value !== previousSelection) {
-        resetRouteHighlight();
-    }
 }
 
 export function updateRoutePathDropdown(loadedData) {
@@ -191,9 +186,6 @@ export function updateRoutePathDropdown(loadedData) {
         routePathSelect.value = previousSelection;
     }
 
-    if (previousSelection && routePathSelect.value !== previousSelection) {
-        resetRouteHighlight();
-    }
 }
 
 // ポイントIDからフィーチャーを取得（ポイントGPS優先）
@@ -313,8 +305,8 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
     // ポイントGPSはライム、geojsonポイントはピンクでハイライト
     const startFeature = getPointFeature(startId, loadedData);
     const endFeature = getPointFeature(endId, loadedData);
-    const startColor = startFeature && startFeature.properties.type === 'ポイントGPS' ? '#00ff00' : '#ff69b4';
-    const endColor = endFeature && endFeature.properties.type === 'ポイントGPS' ? '#00ff00' : '#ff69b4';
+    const startColor = startFeature && startFeature.properties.type === 'ポイントGPS' ? '#DDA0DD' : '#ff69b4';
+    const endColor = endFeature && endFeature.properties.type === 'ポイントGPS' ? '#DDA0DD' : '#ff69b4';
 
     if (startMarker && startMarker.setStyle) {
         startMarker.setStyle({ fillColor: startColor, color: startColor });
