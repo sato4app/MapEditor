@@ -194,9 +194,10 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
     // ボタンではなく、隠しファイル入力要素のchangeイベントを監視
     // ラベルをクリックすると、関連付けられたinputが動作する
     document.getElementById('geoJsonInput').addEventListener('change', async function (e) {
-        const file = e.target.files[0];
-        if (!file) return;
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
 
+        for (const file of files) {
         try {
             const text = await file.text();
             const json = JSON.parse(text);
@@ -209,10 +210,10 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
             // 読み込み種別選択モーダルを表示
             const selection = await showImportTypeModal(allFeatures);
-            if (!selection) return; // キャンセル
+            if (!selection) continue; // キャンセル: 次のファイルへ
 
             // 選択に応じてフィーチャーをフィルタリング
-            const features = allFeatures.filter(f => {
+            let features = allFeatures.filter(f => {
                 if (!f.geometry) return false;
                 const type = f.properties && f.properties.type;
                 const geomType = f.geometry.type;
@@ -228,6 +229,23 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
             // データ初期化 (追加モード)
             let data = initData();
+
+            // 既存ポイントIDと重複するポイントを除外
+            const existingPointIds = new Set(
+                data.features
+                    .filter(f => f.properties && f.properties.type === 'point' && f.properties.id != null)
+                    .map(f => f.properties.id)
+            );
+            let skippedCount = 0;
+            features = features.filter(f => {
+                if (f.properties && f.properties.type === 'point' && f.properties.id != null) {
+                    if (existingPointIds.has(f.properties.id)) {
+                        skippedCount++;
+                        return false;
+                    }
+                }
+                return true;
+            });
 
             data.features.push(...features);
 
@@ -484,14 +502,18 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
             loadedFileCount++;
             updateFileCount();
             updateStats(data);
-            showMessage(`${features.length}件のデータを読み込みました`, 'success');
+            const msg = skippedCount > 0
+                ? `${features.length}件のデータを読み込みました（${skippedCount}件の重複ポイントをスキップ）`
+                : `${features.length}件のデータを読み込みました`;
+            showMessage(msg, 'success');
 
         } catch (error) {
             console.error('GeoJSON load error:', error);
-            showMessage(`読み込みエラー: ${error.message}`, 'error');
-        } finally {
-            this.value = '';
+            showMessage(`読み込みエラー (${file.name}): ${error.message}`, 'error');
         }
+        } // end for (const file of files)
+
+        this.value = '';
     });
 }
 
