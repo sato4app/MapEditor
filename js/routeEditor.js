@@ -302,11 +302,11 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
     const startMarker = markerMap.get(startId);
     const endMarker = markerMap.get(endId);
 
-    // ポイントGPSはライム、geojsonポイントはピンクでハイライト
+    // ポイントGPSはシアン(アクア)、geojsonポイントはピンクでハイライト
     const startFeature = getPointFeature(startId, loadedData);
     const endFeature = getPointFeature(endId, loadedData);
-    const startColor = startFeature && startFeature.properties.type === 'ポイントGPS' ? '#DDA0DD' : '#ff69b4';
-    const endColor = endFeature && endFeature.properties.type === 'ポイントGPS' ? '#DDA0DD' : '#ff69b4';
+    const startColor = startFeature && startFeature.properties.type === 'ポイントGPS' ? '#00FFFF' : '#ff69b4';
+    const endColor = endFeature && endFeature.properties.type === 'ポイントGPS' ? '#00FFFF' : '#ff69b4';
 
     if (startMarker && startMarker.setStyle) {
         startMarker.setStyle({ fillColor: startColor, color: startColor });
