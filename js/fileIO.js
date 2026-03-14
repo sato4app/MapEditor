@@ -315,6 +315,12 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     if (spotMarkerMap) {
                         spotMarkerMap.set(f, marker);
                     }
+
+                    // markerMapにスポットを登録（ルート編集での開始・終了点ハイライト用）
+                    if (markerMap) {
+                        if (props.name) markerMap.set(props.name, marker);
+                        if (props.id && props.id !== props.name) markerMap.set(props.id, marker);
+                    }
                 }
                 // エリア (type="area") -> Polygon
                 else if (type === 'area' && f.geometry.type === 'Polygon') {
