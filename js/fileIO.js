@@ -197,20 +197,27 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
 
+        // 全ファイルのフィーチャーを収集
+        const allFeatures = [];
         for (const file of files) {
-        try {
-            const text = await file.text();
-            const json = JSON.parse(text);
-
-            if (!json.features || !Array.isArray(json.features)) {
-                throw new Error('有効なGeoJSONフォーマットではありません');
+            try {
+                const text = await file.text();
+                const json = JSON.parse(text);
+                if (!json.features || !Array.isArray(json.features)) {
+                    showMessage(`読み込みエラー (${file.name}): 有効なGeoJSONフォーマットではありません`, 'error');
+                    continue;
+                }
+                allFeatures.push(...json.features);
+            } catch (parseError) {
+                showMessage(`読み込みエラー (${file.name}): ${parseError.message}`, 'error');
             }
+        }
+        if (allFeatures.length === 0) { this.value = ''; return; }
 
-            const allFeatures = json.features;
-
-            // 読み込み種別選択モーダルを表示
+        try {
+            // 読み込み種別選択モーダルを1回だけ表示（全ファイルの合計数）
             const selection = await showImportTypeModal(allFeatures);
-            if (!selection) continue; // キャンセル: 次のファイルへ
+            if (!selection) { this.value = ''; return; }
 
             // 選択に応じてフィーチャーをフィルタリング
             let features = allFeatures.filter(f => {
@@ -243,6 +250,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         skippedCount++;
                         return false;
                     }
+                    existingPointIds.add(f.properties.id); // バッチ内重複も除外
                 }
                 return true;
             });
@@ -509,9 +517,8 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
         } catch (error) {
             console.error('GeoJSON load error:', error);
-            showMessage(`読み込みエラー (${file.name}): ${error.message}`, 'error');
+            showMessage(`読み込みエラー: ${error.message}`, 'error');
         }
-        } // end for (const file of files)
 
         this.value = '';
     });
