@@ -62,6 +62,7 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                     type: "Feature",
                     properties: {
                         type: "ポイントGPS",
+                        id: p.pointId,
                         name: p.name,
                         pointId: p.pointId,
                         elevation: p.elevation,
@@ -96,6 +97,11 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                     marker.bindPopup(popupContent);
 
                     geoJsonLayer.addLayer(marker);
+
+                    // markerMapにidをキーとして登録（ルート編集で開始・終了点のハイライトに使用）
+                    if (f.properties.id && markerMap) {
+                        markerMap.set(f.properties.id, marker);
+                    }
                 });
 
                 // 統計情報を更新
