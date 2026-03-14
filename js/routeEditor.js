@@ -434,10 +434,15 @@ export function redrawRouteLine(routeId, loadedData, map) {
             weight: 2
         }).addTo(map);
 
-        // 背景ポリライン（fileIO.js で geoJsonLayer に追加したもの）も更新
+        // 背景ポリライン: 古い線を削除して新しい線を追加
         const bgLine = state.routeLineMap.get(routeId);
-        if (bgLine) {
-            bgLine.setLatLngs(coordinates);
+        if (bgLine && window.geoJsonLayer) {
+            window.geoJsonLayer.removeLayer(bgLine);
+        }
+        if (window.geoJsonLayer) {
+            const newBgLine = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
+            window.geoJsonLayer.addLayer(newBgLine);
+            state.routeLineMap.set(routeId, newBgLine);
         }
     }
 }
@@ -532,7 +537,11 @@ export function deleteWaypoint(routeId, marker, loadedData, markerMap, map) {
 
     if (waypointIndex !== -1) {
         loadedData.features.splice(waypointIndex, 1);
-        map.removeLayer(marker);
+        if (window.geoJsonLayer) {
+            window.geoJsonLayer.removeLayer(marker);
+        } else {
+            map.removeLayer(marker);
+        }
 
         const waypointMarkers = markerMap.get(routeId);
         if (Array.isArray(waypointMarkers)) {
