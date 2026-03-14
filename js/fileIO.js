@@ -87,13 +87,7 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                     const marker = L.circleMarker([lat, lng], style);
 
                     // ポップアップを設定
-                    let popupContent = `<b>${f.properties.name}</b>`;
-                    if (f.properties.description) {
-                        popupContent += `<br>${f.properties.description}`;
-                    }
-                    if (f.properties.elevation) {
-                        popupContent += `<br>標高: ${f.properties.elevation}m`;
-                    }
+                    const popupContent = `${f.properties.id}<br>${f.properties.name}<br>ポイントGPS`;
                     marker.bindPopup(popupContent);
 
                     geoJsonLayer.addLayer(marker);
@@ -244,37 +238,15 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 const props = f.properties || {};
                 const type = props.type;
 
-                // 0. ポイントGPS (type="ポイントGPS") -> 緑色の丸型マーカー、markerMapにpointIdで登録
-                if (type === 'ポイントGPS' && f.geometry.type === 'Point') {
-                    const lat = f.geometry.coordinates[1];
-                    const lng = f.geometry.coordinates[0];
-                    const style = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
-
-                    const marker = L.circleMarker([lat, lng], style);
-
-                    let popupContent = `<b>${props.name || '名称未設定'}</b>`;
-                    if (props.description) popupContent += `<br>${props.description}`;
-                    if (props.elevation) popupContent += `<br>標高: ${props.elevation}m`;
-                    marker.bindPopup(popupContent);
-
-                    geoJsonLayer.addLayer(marker);
-
-                    // markerMapにpointIdをキーとして登録（ルート編集で開始・終了点のハイライトに使用）
-                    if (props.id && markerMap) {
-                        markerMap.set(props.id, marker);
-                    }
-                }
                 // 1. ポイント (type="point") -> 赤色の丸型
-                else if (type === 'point' && f.geometry.type === 'Point') {
+                if (type === 'point' && f.geometry.type === 'Point') {
                     const lat = f.geometry.coordinates[1];
                     const lng = f.geometry.coordinates[0];
                     const style = DEFAULTS.FEATURE_STYLES['point'] || DEFAULTS.FEATURE_STYLES['ポイントGPS'];
 
                     const marker = L.circleMarker([lat, lng], style);
 
-                    let popupContent = `<b>${props.name || '名称未設定'}</b>`;
-                    if (props.description) popupContent += `<br>${props.description}`;
-                    marker.bindPopup(popupContent);
+                    marker.bindPopup(`${props.id || props.pointId || ''}<br>ポイント(GPS変換済)`);
 
                     geoJsonLayer.addLayer(marker);
                 }
@@ -291,15 +263,12 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     if (isEditableRoute) {
                         // 編集用ルート: ポリラインで参考表示（変換処理でポイントGPS/route_waypointマーカーを別途作成）
                         const line = L.polyline(latLngs, { color: '#f58220', weight: 2, opacity: 0.6 });
-                        let popupContent = `<b>${props.name || 'ルート'}</b>`;
-                        if (props.description) popupContent += `<br>${props.description}`;
-                        line.bindPopup(popupContent);
                         geoJsonLayer.addLayer(line);
                         // 背景ポリラインを routeLineMap に登録（waypoint削除時に再描画できるよう）
                         routeEditorState.routeLineMap.set(routeId, line);
                     } else {
                         // 非編集用ルート: 全ての座標に菱形マーカーを表示（従来動作）
-                        latLngs.forEach((latLng, index) => {
+                        latLngs.forEach((latLng) => {
                             const icon = L.divIcon({
                                 className: 'custom-div-icon',
                                 html: '<div class="marker-pin marker-diamond"></div>',
@@ -308,12 +277,6 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                             });
 
                             const marker = L.marker(latLng, { icon: icon });
-
-                            let popupContent = `<b>${props.name || 'ルート'}</b><br>No. ${index + 1}`;
-                            if (props.description) popupContent += `<br>${props.description}`;
-                            if (coords[index][2] !== undefined) popupContent += `<br>標高: ${coords[index][2]}m`;
-                            marker.bindPopup(popupContent);
-
                             geoJsonLayer.addLayer(marker);
                         });
                     }
@@ -333,9 +296,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.marker([lat, lng], { icon: icon });
 
-                    let popupContent = `<b>${props.name || 'スポット'}</b>`;
-                    if (props.description) popupContent += `<br>${props.description}`;
-                    marker.bindPopup(popupContent);
+                    marker.bindPopup(`${props.name || 'スポット'}<br>スポット(GPS変換済)`);
 
                     // スポットモードでクリックしたときにドロップダウンと連動
                     marker.on('click', function(e) {
