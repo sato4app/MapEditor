@@ -159,8 +159,9 @@ document.getElementById('addMoveRouteBtn').addEventListener('click', function ()
     RouteEditor.state.isAddMoveMode = true;
     this.classList.add('active');
 
-    // ルートを最適化
+    // ルートを最適化してラインを再描画
     RouteEditor.optimizeRoute(path, false, getLoadedData(), markerMap);
+    RouteEditor.redrawRouteLine(path, getLoadedData(), map);
 
     // カーソルを十字に変更
     map.getContainer().style.cursor = 'crosshair';
