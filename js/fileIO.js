@@ -73,27 +73,36 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                     }
                 }));
 
-                // 既存データに追加
-                data.features.push(...newFeatures);
-
-                // マーカーを表示
+                // 既存データに追加（同IDのポイントGPSがあればExcelを優先して入れ替え）
+                let replacedCount = 0;
                 newFeatures.forEach(f => {
+                    const id = f.properties.id;
+
+                    // 同じIDの既存ポイントGPSを除去
+                    const existingIndex = data.features.findIndex(
+                        ef => ef.properties && ef.properties.type === 'ポイントGPS' && ef.properties.id === id
+                    );
+                    if (existingIndex !== -1) {
+                        data.features.splice(existingIndex, 1);
+                        const oldMarker = markerMap && markerMap.get(id);
+                        if (oldMarker && geoJsonLayer) {
+                            geoJsonLayer.removeLayer(oldMarker);
+                        }
+                        if (markerMap) markerMap.delete(id);
+                        replacedCount++;
+                    }
+
+                    data.features.push(f);
+
                     const lat = f.geometry.coordinates[1];
                     const lng = f.geometry.coordinates[0];
-                    // スタイルを適用
                     const style = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
-
                     const marker = L.circleMarker([lat, lng], style);
-
-                    // ポップアップを設定
                     const popupContent = `${f.properties.id}<br>${f.properties.name}<br>(PointGPS)`;
                     marker.bindPopup(popupContent);
-
                     geoJsonLayer.addLayer(marker);
-
-                    // markerMapにidをキーとして登録（ルート編集で開始・終了点のハイライトに使用）
-                    if (f.properties.id && markerMap) {
-                        markerMap.set(f.properties.id, marker);
+                    if (id && markerMap) {
+                        markerMap.set(id, marker);
                     }
                 });
 
@@ -102,7 +111,11 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                 updateFileCount();
                 updateStats(data);
 
-                showMessage(`${newFeatures.length}件のポイントGPSを読み込みました`, 'success');
+                const addedCount = newFeatures.length - replacedCount;
+                const msg = replacedCount > 0
+                    ? `${newFeatures.length}件のポイントGPSを読み込みました（${replacedCount}件をExcelで上書き、${addedCount}件を新規追加）`
+                    : `${newFeatures.length}件のポイントGPSを読み込みました`;
+                showMessage(msg, 'success');
 
                 // 地図の範囲を調整（オプション）
                 // 箕面大滝を中心（初期表示）とするため、ここでは移動しない
