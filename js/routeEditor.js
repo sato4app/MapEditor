@@ -170,6 +170,11 @@ export function updateRoutePathDropdown(loadedData) {
         );
     }
 
+    filteredRoutes = [...filteredRoutes].sort((a, b) => {
+        const cmp = a.startId.localeCompare(b.startId, undefined, { numeric: true });
+        return cmp !== 0 ? cmp : a.endId.localeCompare(b.endId, undefined, { numeric: true });
+    });
+
     routePathSelect.innerHTML = '<option value="">開始 ～ 終了ポイント</option>';
     filteredRoutes.forEach(route => {
         const waypointCount = loadedData.features.filter(f =>

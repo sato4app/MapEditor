@@ -65,12 +65,11 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                         id: p.pointId,
                         name: p.name,
                         pointId: p.pointId,
-                        elevation: p.elevation,
                         description: p.description
                     },
                     geometry: {
                         type: "Point",
-                        coordinates: [p.lng, p.lat]
+                        coordinates: p.elevation != null ? [p.lng, p.lat, p.elevation] : [p.lng, p.lat]
                     }
                 }));
 
