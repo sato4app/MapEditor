@@ -464,7 +464,8 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 const waypointMarkers = [];
 
                 coords.forEach((coord, index) => {
-                    const [wLng, wLat] = coord;
+                    const [wLng, wLat, wEle] = coord;
+                    const wpCoords = wEle !== undefined ? [wLng, wLat, wEle] : [wLng, wLat];
                     const wpFeature = {
                         type: 'Feature',
                         properties: {
@@ -472,7 +473,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                             route_id: routeId,
                             waypoint_number: (index + 1).toString()
                         },
-                        geometry: { type: 'Point', coordinates: [wLng, wLat] }
+                        geometry: { type: 'Point', coordinates: wpCoords }
                     };
                     data.features.push(wpFeature);
 
@@ -566,13 +567,44 @@ export function setupFileExport() {
         const routeCount = parseInt(document.getElementById('routeCount').value) || 0;
         const spotCount = parseInt(document.getElementById('spotCount').value) || 0;
 
-        // type="route" の LineString は route_waypoint Point に変換済みのため除外
+        // route_waypoint Point をルートIDでグループ化し、ルートLineStringを生成
+        const waypointsByRoute = {};
+        loadedDataInternal.features
+            .filter(f => f.properties && f.properties.type === 'route_waypoint'
+                      && f.geometry && f.geometry.type === 'Point')
+            .forEach(f => {
+                const routeId = f.properties.route_id;
+                if (!waypointsByRoute[routeId]) waypointsByRoute[routeId] = [];
+                waypointsByRoute[routeId].push(f);
+            });
+
+        const routeLineFeatures = Object.entries(waypointsByRoute).map(([routeId, waypoints]) => {
+            waypoints.sort((a, b) =>
+                parseInt(a.properties.waypoint_number) - parseInt(b.properties.waypoint_number)
+            );
+            const coordinates = waypoints.map(wp => wp.geometry.coordinates);
+            const match = routeId.match(/^route_(.+)_to_(.+)$/);
+            const startPoint = match ? match[1] : '';
+            const endPoint = match ? match[2] : '';
+            return {
+                type: 'Feature',
+                properties: { type: 'route', id: routeId, startPoint, endPoint },
+                geometry: { type: 'LineString', coordinates }
+            };
+        });
+
+        // 個別route_waypoint PointとLineString routeを除外し、生成したLineStringを追加
         const exportData = {
             ...loadedDataInternal,
-            features: loadedDataInternal.features.filter(f =>
-                !(f.properties && f.properties.type === 'route' &&
-                  f.geometry && f.geometry.type === 'LineString')
-            )
+            features: [
+                ...loadedDataInternal.features.filter(f =>
+                    !(f.properties && (
+                        (f.properties.type === 'route_waypoint' && f.geometry && f.geometry.type === 'Point') ||
+                        (f.properties.type === 'route' && f.geometry && f.geometry.type === 'LineString')
+                    ))
+                ),
+                ...routeLineFeatures
+            ]
         };
 
         const dataStr = JSON.stringify(exportData, null, 2);
