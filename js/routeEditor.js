@@ -359,7 +359,7 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
     } else if (startType === 'spot' && startMarker && startMarker.setIcon) {
         startMarker.setIcon(L.divIcon({
             className: 'custom-div-icon',
-            html: `<div class="marker-pin marker-square" style="background-color: ${startColor}; border-color: ${startColor};"></div>`,
+            html: '<div class="marker-pin marker-square" style="background-color: #00FFFF; border-color: #00FFFF;"></div>',
             iconSize: [12, 12],
             iconAnchor: [6, 6]
         }));
@@ -370,7 +370,7 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
     } else if (endType === 'spot' && endMarker && endMarker.setIcon) {
         endMarker.setIcon(L.divIcon({
             className: 'custom-div-icon',
-            html: `<div class="marker-pin marker-square" style="background-color: ${endColor}; border-color: ${endColor};"></div>`,
+            html: '<div class="marker-pin marker-square" style="background-color: #00FFFF; border-color: #00FFFF;"></div>',
             iconSize: [12, 12],
             iconAnchor: [6, 6]
         }));
@@ -420,9 +420,9 @@ export function resetRouteHighlight(markerMap, map, loadedData) {
         } else if (startType === 'spot' && startMarker && startMarker.setIcon) {
             startMarker.setIcon(L.divIcon({
                 className: 'custom-div-icon',
-                html: '<div class="marker-pin marker-square"></div>',
-                iconSize: [12, 12],
-                iconAnchor: [6, 6]
+                html: '<div class="marker-pin marker-square" style="width: 10px; height: 10px;"></div>',
+                iconSize: [10, 10],
+                iconAnchor: [5, 5]
             }));
         }
         if (endMarker && endMarker.setStyle) {
@@ -431,9 +431,9 @@ export function resetRouteHighlight(markerMap, map, loadedData) {
         } else if (endType === 'spot' && endMarker && endMarker.setIcon) {
             endMarker.setIcon(L.divIcon({
                 className: 'custom-div-icon',
-                html: '<div class="marker-pin marker-square"></div>',
-                iconSize: [12, 12],
-                iconAnchor: [6, 6]
+                html: '<div class="marker-pin marker-square" style="width: 10px; height: 10px;"></div>',
+                iconSize: [10, 10],
+                iconAnchor: [5, 5]
             }));
         }
     }

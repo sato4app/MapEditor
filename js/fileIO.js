@@ -312,12 +312,12 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     const lat = f.geometry.coordinates[1];
                     const lng = f.geometry.coordinates[0];
 
-                    // 正方形マーカー (CSSクラスを使用)
+                    // 正方形マーカー (CSSクラスを使用, 10x10px)
                     const icon = L.divIcon({
                         className: 'custom-div-icon',
-                        html: '<div class="marker-pin marker-square"></div>',
-                        iconSize: [12, 12],
-                        iconAnchor: [6, 6]
+                        html: '<div class="marker-pin marker-square" style="width: 10px; height: 10px;"></div>',
+                        iconSize: [10, 10],
+                        iconAnchor: [5, 5]
                     });
 
                     const marker = L.marker([lat, lng], { icon: icon });
