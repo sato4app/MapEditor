@@ -350,11 +350,12 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
     const endFeature = getPointFeature(endId, loadedData);
     const startType = startFeature && startFeature.properties.type;
     const endType = endFeature && endFeature.properties.type;
-    const startColor = (startType === 'ポイントGPS' || startType === 'spot') ? '#00FFFF' : '#ff69b4';
-    const endColor = (endType === 'ポイントGPS' || endType === 'spot') ? '#00FFFF' : '#ff69b4';
+    const startColor = (startType === 'ポイントGPS') ? '#00FF00' : '#ff69b4';
+    const endColor = (endType === 'ポイントGPS') ? '#00FF00' : '#ff69b4';
 
     if (startMarker && startMarker.setStyle) {
         startMarker.setStyle({ fillColor: startColor, color: startColor });
+        if (startMarker.setRadius) startMarker.setRadius(6.5);
     } else if (startType === 'spot' && startMarker && startMarker.setIcon) {
         startMarker.setIcon(L.divIcon({
             className: 'custom-div-icon',
@@ -365,6 +366,7 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
     }
     if (endMarker && endMarker.setStyle) {
         endMarker.setStyle({ fillColor: endColor, color: endColor });
+        if (endMarker.setRadius) endMarker.setRadius(6.5);
     } else if (endType === 'spot' && endMarker && endMarker.setIcon) {
         endMarker.setIcon(L.divIcon({
             className: 'custom-div-icon',
@@ -414,6 +416,7 @@ export function resetRouteHighlight(markerMap, map, loadedData) {
 
         if (startMarker && startMarker.setStyle) {
             startMarker.setStyle(startDefaultStyle);
+            if (startMarker.setRadius) startMarker.setRadius(startDefaultStyle.radius);
         } else if (startType === 'spot' && startMarker && startMarker.setIcon) {
             startMarker.setIcon(L.divIcon({
                 className: 'custom-div-icon',
@@ -424,6 +427,7 @@ export function resetRouteHighlight(markerMap, map, loadedData) {
         }
         if (endMarker && endMarker.setStyle) {
             endMarker.setStyle(endDefaultStyle);
+            if (endMarker.setRadius) endMarker.setRadius(endDefaultStyle.radius);
         } else if (endType === 'spot' && endMarker && endMarker.setIcon) {
             endMarker.setIcon(L.divIcon({
                 className: 'custom-div-icon',
