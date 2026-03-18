@@ -242,6 +242,11 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     .filter(f => f.properties && f.properties.type === 'point' && f.properties.id != null)
                     .map(f => f.properties.id)
             );
+            const existingGpsIds = new Set(
+                data.features
+                    .filter(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id != null)
+                    .map(f => f.properties.id)
+            );
             let skippedCount = 0;
             features = features.filter(f => {
                 if (f.properties && f.properties.type === 'point' && f.properties.id != null) {
@@ -250,6 +255,13 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         return false;
                     }
                     existingPointIds.add(f.properties.id); // バッチ内重複も除外
+                }
+                if (f.properties && f.properties.type === 'ポイントGPS' && f.properties.id != null) {
+                    if (existingGpsIds.has(f.properties.id)) {
+                        skippedCount++;
+                        return false;
+                    }
+                    existingGpsIds.add(f.properties.id); // バッチ内重複も除外
                 }
                 return true;
             });
@@ -274,6 +286,23 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     marker.bindPopup(`${props.id || props.pointId || ''}<br>(Point)`);
 
                     geoJsonLayer.addLayer(marker);
+                }
+                // 1b. ポイントGPS (type="ポイントGPS") -> circleMarker + markerMap登録
+                else if (type === 'ポイントGPS' && f.geometry.type === 'Point') {
+                    const lat = f.geometry.coordinates[1];
+                    const lng = f.geometry.coordinates[0];
+                    const style = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
+
+                    const marker = L.circleMarker([lat, lng], style);
+
+                    const popupContent = `${props.id || ''}<br>${props.name || ''}<br>PointGPS`;
+                    marker.bindPopup(popupContent);
+
+                    geoJsonLayer.addLayer(marker);
+
+                    if (props.id && markerMap) {
+                        markerMap.set(props.id, marker);
+                    }
                 }
                 // 2. ルート (type="route") -> route_X_to_Y パターンはポリライン表示（変換処理でマーカー作成）
                 //                           それ以外は全座標に菱形マーカー表示
