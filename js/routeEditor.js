@@ -511,6 +511,13 @@ export function redrawRouteLine(routeId, loadedData, map) {
         state.selectedRouteLine = null;
     }
 
+    // 背景ポリライン: 常に古い線を削除
+    const bgLine = state.routeLineMap.get(routeId);
+    if (bgLine && window.geoJsonLayer) {
+        window.geoJsonLayer.removeLayer(bgLine);
+        state.routeLineMap.delete(routeId);
+    }
+
     const coordinates = getCoordinatesFromGeoJSON(routeId, loadedData);
     if (coordinates) {
         state.selectedRouteLine = L.polyline(coordinates, {
@@ -518,11 +525,6 @@ export function redrawRouteLine(routeId, loadedData, map) {
             weight: 2
         }).addTo(map);
 
-        // 背景ポリライン: 古い線を削除して新しい線を追加
-        const bgLine = state.routeLineMap.get(routeId);
-        if (bgLine && window.geoJsonLayer) {
-            window.geoJsonLayer.removeLayer(bgLine);
-        }
         if (window.geoJsonLayer) {
             const newBgLine = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
             window.geoJsonLayer.addLayer(newBgLine);

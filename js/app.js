@@ -100,6 +100,8 @@ document.getElementById('routeStart').addEventListener('change', function () {
     const prevRoute = document.getElementById('routePath').value;
     RouteEditor.updateRouteLongDropdown(getLoadedData());
     if (prevRoute && document.getElementById('routePath').value !== prevRoute) {
+        if (RouteEditor.state.isAddMoveMode) RouteEditor.exitAddMoveMode(markerMap, map);
+        if (RouteEditor.state.isDeleteMode) RouteEditor.exitDeleteMode(markerMap);
         RouteEditor.resetRouteHighlight(markerMap, map, getLoadedData());
     }
 });
@@ -108,6 +110,8 @@ document.getElementById('routeEnd').addEventListener('change', function () {
     const prevRoute = document.getElementById('routePath').value;
     RouteEditor.updateRoutePathDropdown(getLoadedData());
     if (prevRoute && document.getElementById('routePath').value !== prevRoute) {
+        if (RouteEditor.state.isAddMoveMode) RouteEditor.exitAddMoveMode(markerMap, map);
+        if (RouteEditor.state.isDeleteMode) RouteEditor.exitDeleteMode(markerMap);
         RouteEditor.resetRouteHighlight(markerMap, map, getLoadedData());
     }
 });
