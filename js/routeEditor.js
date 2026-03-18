@@ -66,12 +66,12 @@ export function extractPointsAndRoutes(geoJsonData) {
 
     // route_idからルートを構築
     routeIdSet.forEach(routeId => {
-        const match = routeId.match(/^route_(.+)_to_(.+)$/);
-        if (match) {
+        const ids = getStartEndIds(routeId, geoJsonData);
+        if (ids) {
             state.allRoutes.push({
                 routeId: routeId,
-                startId: match[1],
-                endId: match[2]
+                startId: ids.startId,
+                endId: ids.endId
             });
         }
     });
@@ -193,6 +193,24 @@ export function updateRoutePathDropdown(loadedData) {
 
 }
 
+// routeId から startId / endId を取得
+// type='route' LineString の startPoint/endPoint を優先し、なければ routeId の正規表現にフォールバック
+function getStartEndIds(routeId, loadedData) {
+    if (loadedData && loadedData.features) {
+        const routeFeature = loadedData.features.find(f =>
+            f.properties && f.properties.type === 'route' &&
+            f.properties.id === routeId &&
+            f.geometry && f.geometry.type === 'LineString'
+        );
+        if (routeFeature && routeFeature.properties.startPoint && routeFeature.properties.endPoint) {
+            return { startId: routeFeature.properties.startPoint, endId: routeFeature.properties.endPoint };
+        }
+    }
+    const match = routeId.match(/^route_(.+)_to_(.+)$/);
+    if (!match) return null;
+    return { startId: match[1], endId: match[2] };
+}
+
 // ポイントIDからフィーチャーを取得（ポイントGPS優先、スポットにフォールバック）
 function getPointFeature(id, loadedData) {
     if (!loadedData || !loadedData.features) return null;
@@ -231,11 +249,11 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
     if (!loadedData || !loadedData.features) return null;
 
     const coordinates = [];
-    const match = routeId.match(/^route_(.+)_to_(.+)$/);
-    if (!match) return null;
+    const ids = getStartEndIds(routeId, loadedData);
+    if (!ids) return null;
 
-    const startId = match[1];
-    const endId = match[2];
+    const startId = ids.startId;
+    const endId = ids.endId;
 
     // type='ポイントGPS' を優先、なければ type='point' にフォールバック（spotは含まない）
     function findGpsOrPoint(id) {
@@ -341,11 +359,11 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
 
     state.selectedRouteId = routeId;
 
-    const match = routeId.match(/^route_(.+)_to_(.+)$/);
-    if (!match) return;
+    const ids = getStartEndIds(routeId, loadedData);
+    if (!ids) return;
 
-    const startId = match[1];
-    const endId = match[2];
+    const startId = ids.startId;
+    const endId = ids.endId;
 
     const startMarker = markerMap.get(startId);
     const endMarker = markerMap.get(endId);
@@ -399,10 +417,10 @@ export function resetRouteHighlight(markerMap, map, loadedData) {
 
     const prevRouteId = state.selectedRouteId;
 
-    const match = prevRouteId.match(/^route_(.+)_to_(.+)$/);
-    if (match) {
-        const startId = match[1];
-        const endId = match[2];
+    const ids = getStartEndIds(prevRouteId, loadedData);
+    if (ids) {
+        const startId = ids.startId;
+        const endId = ids.endId;
 
         const startMarker = markerMap.get(startId);
         const endMarker = markerMap.get(endId);
@@ -664,11 +682,11 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 export function optimizeRoute(routeId, showMessages = true, loadedData, markerMap) {
     if (!loadedData || !loadedData.features) return;
 
-    const match = routeId.match(/^route_(.+)_to_(.+)$/);
-    if (!match) return;
+    const ids = getStartEndIds(routeId, loadedData);
+    if (!ids) return;
 
-    const startId = match[1];
-    const endId = match[2];
+    const startId = ids.startId;
+    const endId = ids.endId;
 
     // type='ポイントGPS' を優先、なければ type='point'、最後に type='spot' にフォールバック
     const startFeature = loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id === startId)

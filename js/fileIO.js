@@ -86,7 +86,7 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                     const marker = L.circleMarker([lat, lng], style);
 
                     // ポップアップを設定
-                    const popupContent = `${f.properties.id}<br>${f.properties.name}<br>PointGPS`;
+                    const popupContent = `${f.properties.id}<br>${f.properties.name}<br>(PointGPS)`;
                     marker.bindPopup(popupContent);
 
                     geoJsonLayer.addLayer(marker);
@@ -295,7 +295,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.circleMarker([lat, lng], style);
 
-                    const popupContent = `${props.id || ''}<br>${props.name || ''}<br>PointGPS`;
+                    const popupContent = `${props.id || ''}<br>${props.name || ''}<br>(PointGPS)`;
                     marker.bindPopup(popupContent);
 
                     geoJsonLayer.addLayer(marker);
