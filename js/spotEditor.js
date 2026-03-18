@@ -253,7 +253,7 @@ export function addSpotToMap(latlng, loadedData, spotMarkerMap, geoJsonLayer) {
         })
     }).addTo(geoJsonLayer);
 
-    marker.bindPopup(newSpotName);
+    marker.bindPopup(`${newSpotName}<br>(Spot)`);
 
     marker.on('click', function(e) {
         const currentMode = document.querySelector('input[name="mode"]:checked').value;

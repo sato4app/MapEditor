@@ -87,7 +87,7 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                     const marker = L.circleMarker([lat, lng], style);
 
                     // ポップアップを設定
-                    const popupContent = `${f.properties.id}<br>${f.properties.name}<br>ポイントGPS`;
+                    const popupContent = `${f.properties.id}<br>${f.properties.name}<br>PointGPS`;
                     marker.bindPopup(popupContent);
 
                     geoJsonLayer.addLayer(marker);
@@ -272,7 +272,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.circleMarker([lat, lng], style);
 
-                    marker.bindPopup(`${props.id || props.pointId || ''}<br>ポイント(GPS変換済)`);
+                    marker.bindPopup(`${props.id || props.pointId || ''}<br>(Point)`);
 
                     geoJsonLayer.addLayer(marker);
                 }
@@ -322,7 +322,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.marker([lat, lng], { icon: icon });
 
-                    marker.bindPopup(`${props.name || 'スポット'}<br>スポット(GPS変換済)`);
+                    marker.bindPopup(`${props.name || 'スポット'}<br>(Spot)`);
 
                     // スポットモードでクリックしたときにドロップダウンと連動
                     marker.on('click', function(e) {
