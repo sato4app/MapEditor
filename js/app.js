@@ -317,6 +317,10 @@ document.getElementById('clearRouteBtn').addEventListener('click', async functio
 
 // リセットボタン
 document.getElementById('resetDropdownBtn').addEventListener('click', function () {
+    // モードが有効な場合は解除
+    if (RouteEditor.state.isAddMoveMode) RouteEditor.exitAddMoveMode(markerMap, map);
+    if (RouteEditor.state.isDeleteMode) RouteEditor.exitDeleteMode(markerMap);
+
     // ハイライトをリセット
     RouteEditor.resetRouteHighlight(markerMap, map, getLoadedData());
 
