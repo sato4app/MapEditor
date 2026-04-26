@@ -497,9 +497,22 @@ function applyDuplicateExtraction(bounds, map, spotMarkerMap, getLoadedData, geo
             if (ev && ev.originalEvent) {
                 L.DomEvent.stopPropagation(ev.originalEvent);
             }
-            // 削除後、現在の長方形で重複抽出を再実行
+            // 削除後、一旦重複判定をクリアする
+            clearDuplicateMarkings(spotMarkerMap);
+
             if (duplicateExtractRectangle) {
-                applyDuplicateExtraction(duplicateExtractRectangle.getBounds(), map, spotMarkerMap, getLoadedData, geoJsonLayer);
+                const bounds = duplicateExtractRectangle.getBounds();
+                // 抽出を再実行して再度判定する (UIにクリアが反映されるように少し遅延させる)
+                setTimeout(() => {
+                    if (isExtractDuplicateMode) {
+                        const count = applyDuplicateExtraction(bounds, map, spotMarkerMap, getLoadedData, geoJsonLayer);
+                        if (count > 0) {
+                            showMessage(`再判定: 重複スポットが ${count} 件残っています`, 'info');
+                        } else {
+                            showMessage(`この範囲の重複スポットはなくなりました`, 'success');
+                        }
+                    }
+                }, 100);
             }
         };
         d.marker.on('click', handler);
