@@ -17,6 +17,7 @@ export let isExtractDuplicateMode = false;
 let duplicateExtractHandlers = null; // { mousedown, mousemove, mouseup }
 let duplicateExtractRectangle = null; // ドラッグ中/直近の長方形レイヤー
 const duplicateMarkedSpots = new Set(); // アクア色に変えたマーカー(featureを保持)
+const duplicateClickHandlerMap = new Map(); // feature -> 削除用clickハンドラ
 
 // 状態変更用のセッター関数
 export function setSelectedSpotFeature(value) {
@@ -262,6 +263,8 @@ export function addSpotToMap(latlng, loadedData, spotMarkerMap, geoJsonLayer) {
     marker.bindPopup(`${newSpotName}<br>(Spot)`);
 
     marker.on('click', function(e) {
+        // 重複スポット抽出モード中はドロップダウン選択を行わない
+        if (isExtractDuplicateMode) return;
         const currentMode = document.querySelector('input[name="mode"]:checked').value;
         if (currentMode === MODES.SPOT) {
             const spotIndex = allSpots.findIndex(spot => spot.feature === newSpotFeature);
@@ -395,8 +398,55 @@ function findDuplicateSpotsInBounds(bounds, spotMarkerMap) {
     return Array.from(duplicateSet);
 }
 
+// 重複と判定されたスポットを削除する内部処理
+function removeDuplicateSpot(feature, marker, map, spotMarkerMap, getLoadedData, geoJsonLayer) {
+    // GeoJSONデータから削除
+    const data = getLoadedData && getLoadedData();
+    if (data && data.features) {
+        const idx = data.features.findIndex(f => f === feature);
+        if (idx !== -1) data.features.splice(idx, 1);
+    }
+
+    // 地図からマーカー削除
+    if (marker) {
+        if (geoJsonLayer && geoJsonLayer.hasLayer && geoJsonLayer.hasLayer(marker)) {
+            geoJsonLayer.removeLayer(marker);
+        }
+        if (map && map.hasLayer && map.hasLayer(marker)) {
+            map.removeLayer(marker);
+        }
+    }
+
+    // spotMarkerMap から削除
+    if (spotMarkerMap) spotMarkerMap.delete(feature);
+
+    // allSpots から削除
+    const sIdx = allSpots.findIndex(s => s.feature === feature);
+    if (sIdx !== -1) allSpots.splice(sIdx, 1);
+
+    // 内部状態を整理
+    duplicateMarkedSpots.delete(feature);
+    duplicateClickHandlerMap.delete(feature);
+
+    // 選択中スポットだった場合は解除
+    if (selectedSpotFeature === feature) {
+        setSelectedSpotFeature(null);
+        setSelectedSpotMarker(null);
+        const nameInput = document.getElementById('selectedSpotName');
+        if (nameInput) nameInput.value = '';
+        const categorySelect = document.getElementById('spotCategory');
+        if (categorySelect) categorySelect.value = '';
+        const spotSelect = document.getElementById('spotSelect');
+        if (spotSelect) spotSelect.value = '';
+    }
+
+    // ドロップダウンと統計を更新
+    updateSpotDropdown();
+    updateStats(data);
+}
+
 // 重複スポット抽出モードを開始
-export function enterExtractDuplicateMode(map, spotMarkerMap) {
+export function enterExtractDuplicateMode(map, spotMarkerMap, getLoadedData, geoJsonLayer) {
     if (isExtractDuplicateMode) return;
     isExtractDuplicateMode = true;
 
@@ -448,6 +498,22 @@ export function enterExtractDuplicateMode(map, spotMarkerMap) {
         duplicates.forEach(d => {
             applySpotAquaColor(d.marker);
             duplicateMarkedSpots.add(d.feature);
+
+            // 既に削除用clickハンドラを登録済みならスキップ
+            if (duplicateClickHandlerMap.has(d.feature)) return;
+
+            const handler = (ev) => {
+                if (!isExtractDuplicateMode) return;
+                if (!duplicateMarkedSpots.has(d.feature)) return;
+                const name = (d.feature.properties && d.feature.properties.name) || '';
+                removeDuplicateSpot(d.feature, d.marker, map, spotMarkerMap, getLoadedData, geoJsonLayer);
+                showMessage(`重複スポット「${name}」を削除しました`, 'success');
+                if (ev && ev.originalEvent) {
+                    L.DomEvent.stopPropagation(ev.originalEvent);
+                }
+            };
+            d.marker.on('click', handler);
+            duplicateClickHandlerMap.set(d.feature, { marker: d.marker, handler });
         });
         showMessage(`重複スポットを${duplicates.length}件抽出しました`, 'success');
         startLatLng = null;
@@ -479,6 +545,12 @@ export function exitExtractDuplicateMode(map, spotMarkerMap) {
         map.removeLayer(duplicateExtractRectangle);
         duplicateExtractRectangle = null;
     }
+
+    // 重複マーカーに登録した削除用clickハンドラを解除
+    duplicateClickHandlerMap.forEach(({ marker, handler }) => {
+        if (marker && marker.off) marker.off('click', handler);
+    });
+    duplicateClickHandlerMap.clear();
 
     // アクア色にしたマーカーを既定色に戻す
     duplicateMarkedSpots.forEach(feature => {

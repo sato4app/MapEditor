@@ -4,7 +4,7 @@ import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString } from './stats.js';
 import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, state as routeEditorState } from './routeEditor.js';
-import { extractSpots, updateSpotDropdown, highlightSpot, allSpots } from './spotEditor.js';
+import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 
 // ファイル入出力の状態管理
@@ -367,6 +367,8 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     // スポットモードでクリックしたときにドロップダウンと連動
                     marker.on('click', function(e) {
+                        // 重複スポット抽出モード中はドロップダウン選択を行わない(削除ハンドラに委ねる)
+                        if (isExtractDuplicateMode) return;
                         const currentMode = document.querySelector('input[name="mode"]:checked').value;
                         if (currentMode === MODES.SPOT) {
                             const spotIndex = allSpots.findIndex(spot => spot.feature === f);

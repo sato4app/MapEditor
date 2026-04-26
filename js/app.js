@@ -527,8 +527,8 @@ document.getElementById('extractDuplicateSpotsBtn').addEventListener('click', fu
         SpotEditor.exitAddMoveSpotMode(map);
     }
 
-    SpotEditor.enterExtractDuplicateMode(map, spotMarkerMap);
-    showMessage('地図上でドラッグして長方形を描いてください。\n長方形内の同名スポットの重複を抽出します。\nボタンをもう一度クリックで解除', 'success');
+    SpotEditor.enterExtractDuplicateMode(map, spotMarkerMap, getLoadedData, geoJsonLayer);
+    showMessage('地図上でドラッグして長方形を描いてください。\n長方形内の同名スポットの重複を抽出します。\nアクア色のスポットをクリックすると削除できます。\nボタンをもう一度クリックで解除', 'success');
 });
 
 // ========================================
