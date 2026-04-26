@@ -536,18 +536,18 @@ export function enterExtractDuplicateMode(map, spotMarkerMap, getLoadedData, geo
 
     let startLatLng = null;
     let isDrawing = false;
+    let hasMoved = false;
 
     const onMouseDown = (e) => {
         isDrawing = true;
+        hasMoved = false;
         startLatLng = e.latlng;
-        if (duplicateExtractRectangle) {
-            map.removeLayer(duplicateExtractRectangle);
-            duplicateExtractRectangle = null;
-        }
+        // マウスクリックのみで長方形が消えてしまうのを防ぐため、ここでは削除しない
     };
 
     const onMouseMove = (e) => {
         if (!isDrawing || !startLatLng) return;
+        hasMoved = true;
         const bounds = L.latLngBounds(startLatLng, e.latlng);
         if (duplicateExtractRectangle) {
             duplicateExtractRectangle.setBounds(bounds);
@@ -565,14 +565,16 @@ export function enterExtractDuplicateMode(map, spotMarkerMap, getLoadedData, geo
     const onMouseUp = (e) => {
         if (!isDrawing) return;
         isDrawing = false;
-        if (!duplicateExtractRectangle) {
-            startLatLng = null;
+        startLatLng = null;
+
+        // 実際にドラッグが行われなかった場合（単なるクリック）は、抽出を再実行しない
+        if (!hasMoved || !duplicateExtractRectangle) {
             return;
         }
+
         const bounds = duplicateExtractRectangle.getBounds();
         const count = applyDuplicateExtraction(bounds, map, spotMarkerMap, getLoadedData, geoJsonLayer);
         showMessage(`重複スポットを${count}件抽出しました`, 'success');
-        startLatLng = null;
     };
 
     map.on('mousedown', onMouseDown);
