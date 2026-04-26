@@ -445,6 +445,49 @@ function removeDuplicateSpot(feature, marker, map, spotMarkerMap, getLoadedData,
     updateStats(data);
 }
 
+// 重複マーカーの色とclickハンドラを全て解除
+function clearDuplicateMarkings(spotMarkerMap) {
+    duplicateClickHandlerMap.forEach(({ marker, handler }) => {
+        if (marker && marker.off) marker.off('click', handler);
+    });
+    duplicateClickHandlerMap.clear();
+
+    duplicateMarkedSpots.forEach(feature => {
+        const marker = spotMarkerMap && spotMarkerMap.get(feature);
+        if (marker) resetSpotHighlightWithParams(marker, feature);
+    });
+    duplicateMarkedSpots.clear();
+}
+
+// 指定された長方形内で重複抽出を実行(既存の重複表示はクリアして再抽出)
+function applyDuplicateExtraction(bounds, map, spotMarkerMap, getLoadedData, geoJsonLayer) {
+    clearDuplicateMarkings(spotMarkerMap);
+
+    const duplicates = findDuplicateSpotsInBounds(bounds, spotMarkerMap);
+    duplicates.forEach(d => {
+        applySpotAquaColor(d.marker);
+        duplicateMarkedSpots.add(d.feature);
+
+        const handler = (ev) => {
+            if (!isExtractDuplicateMode) return;
+            if (!duplicateMarkedSpots.has(d.feature)) return;
+            const name = (d.feature.properties && d.feature.properties.name) || '';
+            removeDuplicateSpot(d.feature, d.marker, map, spotMarkerMap, getLoadedData, geoJsonLayer);
+            showMessage(`重複スポット「${name}」を削除しました`, 'success');
+            if (ev && ev.originalEvent) {
+                L.DomEvent.stopPropagation(ev.originalEvent);
+            }
+            // 削除後、現在の長方形で重複抽出を再実行
+            if (duplicateExtractRectangle) {
+                applyDuplicateExtraction(duplicateExtractRectangle.getBounds(), map, spotMarkerMap, getLoadedData, geoJsonLayer);
+            }
+        };
+        d.marker.on('click', handler);
+        duplicateClickHandlerMap.set(d.feature, { marker: d.marker, handler });
+    });
+    return duplicates.length;
+}
+
 // 重複スポット抽出モードを開始
 export function enterExtractDuplicateMode(map, spotMarkerMap, getLoadedData, geoJsonLayer) {
     if (isExtractDuplicateMode) return;
@@ -494,28 +537,8 @@ export function enterExtractDuplicateMode(map, spotMarkerMap, getLoadedData, geo
             return;
         }
         const bounds = duplicateExtractRectangle.getBounds();
-        const duplicates = findDuplicateSpotsInBounds(bounds, spotMarkerMap);
-        duplicates.forEach(d => {
-            applySpotAquaColor(d.marker);
-            duplicateMarkedSpots.add(d.feature);
-
-            // 既に削除用clickハンドラを登録済みならスキップ
-            if (duplicateClickHandlerMap.has(d.feature)) return;
-
-            const handler = (ev) => {
-                if (!isExtractDuplicateMode) return;
-                if (!duplicateMarkedSpots.has(d.feature)) return;
-                const name = (d.feature.properties && d.feature.properties.name) || '';
-                removeDuplicateSpot(d.feature, d.marker, map, spotMarkerMap, getLoadedData, geoJsonLayer);
-                showMessage(`重複スポット「${name}」を削除しました`, 'success');
-                if (ev && ev.originalEvent) {
-                    L.DomEvent.stopPropagation(ev.originalEvent);
-                }
-            };
-            d.marker.on('click', handler);
-            duplicateClickHandlerMap.set(d.feature, { marker: d.marker, handler });
-        });
-        showMessage(`重複スポットを${duplicates.length}件抽出しました`, 'success');
+        const count = applyDuplicateExtraction(bounds, map, spotMarkerMap, getLoadedData, geoJsonLayer);
+        showMessage(`重複スポットを${count}件抽出しました`, 'success');
         startLatLng = null;
     };
 
@@ -546,20 +569,8 @@ export function exitExtractDuplicateMode(map, spotMarkerMap) {
         duplicateExtractRectangle = null;
     }
 
-    // 重複マーカーに登録した削除用clickハンドラを解除
-    duplicateClickHandlerMap.forEach(({ marker, handler }) => {
-        if (marker && marker.off) marker.off('click', handler);
-    });
-    duplicateClickHandlerMap.clear();
-
-    // アクア色にしたマーカーを既定色に戻す
-    duplicateMarkedSpots.forEach(feature => {
-        const marker = spotMarkerMap && spotMarkerMap.get(feature);
-        if (marker) {
-            resetSpotHighlightWithParams(marker, feature);
-        }
-    });
-    duplicateMarkedSpots.clear();
+    // 重複マーカーの色とclickハンドラをクリア
+    clearDuplicateMarkings(spotMarkerMap);
 
     // 現在選択中のスポットがリセットされた場合は再ハイライト
     if (selectedSpotMarker && selectedSpotFeature) {
