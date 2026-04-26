@@ -14,6 +14,9 @@ export const DEFAULTS = {
     // Excel読み込み制限
     MAX_EXCEL_ROWS: 1000, // ヘッダー行含む最大読み込み行数
 
+    // 重複スポット判定: 同名かつこの距離(メートル)以内のものを重複とみなす
+    DUPLICATE_SPOT_DISTANCE_M: 30,
+
     // スタイル設定
     POINT_STYLE: {
         radius: 6,

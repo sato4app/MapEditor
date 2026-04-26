@@ -557,7 +557,8 @@ button:hover {
 
 .spot-buttons {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .spot-btn {

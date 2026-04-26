@@ -34,6 +34,10 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
 
         // スポットモードから離れる場合、スポット関連の状態をリセット
         if (this.value !== MODES.SPOT) {
+            if (SpotEditor.isExtractDuplicateMode) {
+                SpotEditor.exitExtractDuplicateMode(map, spotMarkerMap);
+            }
+
             SpotEditor.resetSpotHighlight();
 
             if (SpotEditor.isAddMoveSpotMode) {
@@ -401,6 +405,11 @@ document.getElementById('addMoveSpotBtn').addEventListener('click', function () 
         return;
     }
 
+    // 重複スポット抽出モードが有効な場合は解除
+    if (SpotEditor.isExtractDuplicateMode) {
+        SpotEditor.exitExtractDuplicateMode(map, spotMarkerMap);
+    }
+
     // 追加・移動モードを開始
     SpotEditor.setIsAddMoveSpotMode(true);
     this.classList.add('active');
@@ -453,6 +462,9 @@ document.getElementById('deleteSpotBtn').addEventListener('click', function () {
     if (SpotEditor.isAddMoveSpotMode) {
         SpotEditor.exitAddMoveSpotMode(map);
     }
+    if (SpotEditor.isExtractDuplicateMode) {
+        SpotEditor.exitExtractDuplicateMode(map, spotMarkerMap);
+    }
 
     // GeoJSONデータから削除
     const data = getLoadedData();
@@ -493,6 +505,30 @@ document.getElementById('deleteSpotBtn').addEventListener('click', function () {
     document.getElementById('spotCategory').value = '';
 
     showMessage('スポットを削除しました', 'success');
+});
+
+// 重複スポット抽出ボタン
+document.getElementById('extractDuplicateSpotsBtn').addEventListener('click', function () {
+    // 既に抽出モードの場合は解除
+    if (SpotEditor.isExtractDuplicateMode) {
+        SpotEditor.exitExtractDuplicateMode(map, spotMarkerMap);
+        showMessage('重複スポット抽出モードを解除しました', 'success');
+        return;
+    }
+
+    // データが読み込まれていない場合
+    if (!getLoadedData()) {
+        showMessage('先にGeoJSONファイルを読み込んでください', 'warning');
+        return;
+    }
+
+    // 他のスポットモードが有効な場合は解除
+    if (SpotEditor.isAddMoveSpotMode) {
+        SpotEditor.exitAddMoveSpotMode(map);
+    }
+
+    SpotEditor.enterExtractDuplicateMode(map, spotMarkerMap);
+    showMessage('地図上でドラッグして長方形を描いてください。\n長方形内の同名スポットの重複を抽出します。\nボタンをもう一度クリックで解除', 'success');
 });
 
 // ========================================
