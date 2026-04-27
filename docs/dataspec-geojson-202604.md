@@ -88,10 +88,14 @@ Excel(.xlsx)から読み込んだGPSポイントデータ。同じIDで読み込
 - **Geometry Type**: `LineString`
 - **Properties** (エクスポート時にMapEditorが生成):
   - `type`: `"route"` (固定、必須)
-  - `id`: ルートID（フォーマット: `route_<startPoint>_to_<endPoint>`）
-  - `startPoint`: 開始ポイントID（`id`から正規表現抽出）
-  - `endPoint`: 終了ポイントID（`id`から正規表現抽出）
+  - `id`: ルートID（フォーマット: `route_<startPointGPS>_to_<endPointGPS>`）
+  - `startPointGPS`: 開始ポイントのGPSポイントID（`id`から正規表現抽出）
+  - `endPointGPS`: 終了ポイントのGPSポイントID（`id`から正規表現抽出）
 - **座標**: `route_waypoint` の座標を `waypoint_number` 順に並べたもの。各座標は `[経度, 緯度]` または `[経度, 緯度, 標高]`
+- **開始・終了ポイントの解決**: `startPointGPS` / `endPointGPS` の値をキーとして、以下の優先順位で対応するFeatureを検索し、その座標をLineString描画の始点・終点に使用します。
+  1. `type: "ポイントGPS"` の `id` に一致
+  2. `type: "point"` の `id` に一致
+  3. `type: "spot"` の `id` または `name` に一致（同名スポットが複数ある場合は、相手側端点に最も近いものを採用）
 
 ```json
 {
@@ -99,8 +103,8 @@ Excel(.xlsx)から読み込んだGPSポイントデータ。同じIDで読み込
   "properties": {
     "type": "route",
     "id": "route_A-01_to_A-05",
-    "startPoint": "A-01",
-    "endPoint": "A-05"
+    "startPointGPS": "A-01",
+    "endPointGPS": "A-05"
   },
   "geometry": {
     "type": "LineString",
@@ -157,7 +161,7 @@ Excel(.xlsx)から読み込んだGPSポイントデータ。同じIDで読み込
 - **Properties**:
   - `type`: `"area"` (固定、必須)
   - `name`: エリア名称
-    - MapEditor上で新規作成した場合、初期値は連番付きの仮名称
+    - MapEditor上で新規作成した場合、初期値は `"エリア<連番>"`（例: `"エリア1"`、`"エリア2"`、…）
   - `id`: エリアID（入力ファイル由来。MapEditor新規作成時は付与されない）
   - その他、入力ファイル由来のプロパティは保持されます
 - **座標**: GeoJSON Polygon仕様に従い、最初の配列は外周リング、以降は穴を表すリング。各リングの始点と終点の座標は同一であること。
@@ -205,10 +209,13 @@ GeoJSON読み込み時にMapEditorは以下の処理を行います:
 
 - **ポイントGPS** は MapEditor 独自の中間種別であり、GeoReferencer等の標準仕様には含まれない場合があります。Excel読み込み機能の入力データとして使用されます。
 - **`source` / `description` フィールド** は、入力GeoJSONに含まれていれば保持して再出力されますが、MapEditorが新規生成するルート (`route`)、スポット (`spot`)、エリア (`area`) のFeatureには付与されません。
-- **`name` フィールド** は、ルート (`route`) Feature にはエクスポート時に付与されません（`startPoint` / `endPoint` で識別）。
+- **`name` フィールド** は、ルート (`route`) Feature にはエクスポート時に付与されません（`startPointGPS` / `endPointGPS` で識別）。
 
 ---
 
-**作成日**: 2026年4月26日
-**バージョン**: 2.1（MapEditor現状コード準拠）
+**作成日**: 2026年4月27日
+**バージョン**: 2.2（MapEditor現状コード準拠）
+**変更履歴**:
+- v2.2 (2026-04-27): ルートFeatureのプロパティ名を `startPoint` / `endPoint` から `startPointGPS` / `endPointGPS` に変更。開始・終了ポイントの解決優先順位（ポイントGPS → point → spot）を追記。エリア新規作成時の初期名 `"エリア<連番>"` を明記。
+- v2.1 (2026-04-26): MapEditor現状コード準拠版を作成。
 **前バージョン**: `dataspec-geojson-202602.md`（GeoReferencer v2.0仕様）
