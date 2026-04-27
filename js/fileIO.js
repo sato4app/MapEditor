@@ -627,11 +627,11 @@ export function setupFileExport() {
             );
             const coordinates = waypoints.map(wp => wp.geometry.coordinates);
             const match = routeId.match(/^route_(.+)_to_(.+)$/);
-            const startPoint = match ? match[1] : '';
-            const endPoint = match ? match[2] : '';
+            const startPointGPS = match ? match[1] : '';
+            const endPointGPS = match ? match[2] : '';
             return {
                 type: 'Feature',
-                properties: { type: 'route', id: routeId, startPoint, endPoint },
+                properties: { type: 'route', id: routeId, startPointGPS, endPointGPS },
                 geometry: { type: 'LineString', coordinates }
             };
         });
