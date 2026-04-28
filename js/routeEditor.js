@@ -194,7 +194,8 @@ export function updateRoutePathDropdown(loadedData) {
 }
 
 // routeId から startId / endId を取得
-// type='route' LineString の startPointGPS/endPointGPS を優先し、なければ routeId の正規表現にフォールバック
+// 優先順位: type='route' LineString の startPoint/endPoint（v2.4 / GeoReferencer 形式）
+// → startPointGPS/endPointGPS が文字列の場合（v2.3 互換） → routeId の正規表現フォールバック
 function getStartEndIds(routeId, loadedData) {
     if (loadedData && loadedData.features) {
         const routeFeature = loadedData.features.find(f =>
@@ -202,8 +203,14 @@ function getStartEndIds(routeId, loadedData) {
             f.properties.id === routeId &&
             f.geometry && f.geometry.type === 'LineString'
         );
-        if (routeFeature && routeFeature.properties.startPointGPS && routeFeature.properties.endPointGPS) {
-            return { startId: routeFeature.properties.startPointGPS, endId: routeFeature.properties.endPointGPS };
+        if (routeFeature) {
+            const props = routeFeature.properties;
+            if (props.startPoint && props.endPoint) {
+                return { startId: props.startPoint, endId: props.endPoint };
+            }
+            if (typeof props.startPointGPS === 'string' && typeof props.endPointGPS === 'string') {
+                return { startId: props.startPointGPS, endId: props.endPointGPS };
+            }
         }
     }
     const match = routeId.match(/^route_(.+)_to_(.+)$/);
