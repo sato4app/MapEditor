@@ -685,7 +685,134 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
     return R * c;
 }
 
-// ルートを最適化（貪欲法）
+// 距離行列を構築（インデックス: 0=開始点, 1..n=中間点, n+1=終了点）
+function buildDistanceMatrix(startLat, startLng, waypointCoords, endLat, endLng) {
+    const allPoints = [[startLat, startLng], ...waypointCoords, [endLat, endLng]];
+    const n = allPoints.length;
+    const dist = Array.from({ length: n }, () => new Array(n).fill(0));
+    for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+            const d = calculateDistance(allPoints[i][0], allPoints[i][1], allPoints[j][0], allPoints[j][1]);
+            dist[i][j] = d;
+            dist[j][i] = d;
+        }
+    }
+    return dist;
+}
+
+// 順列の総距離（開始点 → order → 終了点）
+function pathDistance(order, dist) {
+    const endIdx = dist.length - 1;
+    let total = dist[0][order[0]];
+    for (let i = 0; i < order.length - 1; i++) {
+        total += dist[order[i]][order[i + 1]];
+    }
+    total += dist[order[order.length - 1]][endIdx];
+    return total;
+}
+
+// Stage 1: 貪欲法（開始点から最近傍の中間点を順に採用）で初期順序を作る
+function greedyOrder(dist, waypointCount) {
+    const order = [];
+    const visited = new Array(waypointCount + 2).fill(false);
+    let current = 0;
+    for (let step = 0; step < waypointCount; step++) {
+        let nearest = -1;
+        let minDist = Infinity;
+        for (let i = 1; i <= waypointCount; i++) {
+            if (visited[i]) continue;
+            const d = dist[current][i];
+            if (d < minDist) {
+                minDist = d;
+                nearest = i;
+            }
+        }
+        visited[nearest] = true;
+        order.push(nearest);
+        current = nearest;
+    }
+    return order;
+}
+
+// Stage 2: 分枝限定法。構築途中の累積距離が現時点の最良解以上になった枝を打ち切る。
+// 子ノードは近い順に試して早期に良い解を発見し、枝刈り効率を上げる。
+function branchAndBound(dist, waypointCount, initialOrder, timeBudgetMs) {
+    const endIdx = waypointCount + 1;
+    let best = pathDistance(initialOrder, dist);
+    let bestOrder = [...initialOrder];
+    const startTime = Date.now();
+    let aborted = false;
+    let iterCount = 0;
+    const visited = new Array(waypointCount + 2).fill(false);
+    const path = [];
+
+    function recurse(current, accDist) {
+        if (aborted) return;
+        // 1024 反復ごとに時間を確認（Date.now コール頻度を抑制）
+        if ((++iterCount & 1023) === 0 && Date.now() - startTime > timeBudgetMs) {
+            aborted = true;
+            return;
+        }
+        if (path.length === waypointCount) {
+            const total = accDist + dist[current][endIdx];
+            if (total < best) {
+                best = total;
+                bestOrder = [...path];
+            }
+            return;
+        }
+        const candidates = [];
+        for (let i = 1; i <= waypointCount; i++) {
+            if (!visited[i]) candidates.push({ idx: i, d: dist[current][i] });
+        }
+        candidates.sort((a, b) => a.d - b.d);
+        for (const { idx, d } of candidates) {
+            const newAcc = accDist + d;
+            if (newAcc >= best) continue;
+            visited[idx] = true;
+            path.push(idx);
+            recurse(idx, newAcc);
+            path.pop();
+            visited[idx] = false;
+        }
+    }
+
+    recurse(0, 0);
+    return bestOrder;
+}
+
+// Stage 3: 2-opt 改善。区間 i..j を反転して総距離が縮むなら採用、止まるまで繰り返す。
+function twoOptImprove(dist, order, timeBudgetMs, maxPasses) {
+    const startTime = Date.now();
+    const endIdx = dist.length - 1;
+    const path = [0, ...order, endIdx];
+    let improved = true;
+    let passes = 0;
+    while (improved && passes < maxPasses) {
+        if (Date.now() - startTime > timeBudgetMs) break;
+        improved = false;
+        passes++;
+        for (let i = 1; i < path.length - 2; i++) {
+            for (let j = i + 1; j < path.length - 1; j++) {
+                const a = path[i - 1], b = path[i], c = path[j], d = path[j + 1];
+                const before = dist[a][b] + dist[c][d];
+                const after = dist[a][c] + dist[b][d];
+                if (after < before - 1e-12) {
+                    let l = i, r = j;
+                    while (l < r) {
+                        const tmp = path[l]; path[l] = path[r]; path[r] = tmp;
+                        l++; r--;
+                    }
+                    improved = true;
+                }
+            }
+        }
+    }
+    return path.slice(1, path.length - 1);
+}
+
+// ルートを最適化（3段構え: 貪欲 → 分枝限定 → 2-opt）
+// 開始ポイントから終了ポイントまでの総距離を最小化するように中間点を並び替える。
 export function optimizeRoute(routeId, showMessages = true, loadedData, markerMap) {
     if (!loadedData || !loadedData.features) return;
 
@@ -711,6 +838,7 @@ export function optimizeRoute(routeId, showMessages = true, loadedData, markerMa
     }
 
     const [startLng, startLat] = startFeature.geometry.coordinates;
+    const [endLng, endLat] = endFeature.geometry.coordinates;
 
     const waypoints = loadedData.features.filter(f =>
         f.properties && f.properties.route_id === routeId && f.properties.type === 'route_waypoint'
@@ -720,29 +848,31 @@ export function optimizeRoute(routeId, showMessages = true, loadedData, markerMa
         return;
     }
 
-    const optimizedWaypoints = [];
-    const remainingWaypoints = [...waypoints];
-    let currentLat = startLat;
-    let currentLng = startLng;
+    const waypointCoords = waypoints.map(wp => {
+        const [lng, lat] = wp.geometry.coordinates;
+        return [lat, lng];
+    });
+    const n = waypoints.length;
+    const dist = buildDistanceMatrix(startLat, startLng, waypointCoords, endLat, endLng);
 
-    while (remainingWaypoints.length > 0) {
-        let nearestIndex = 0;
-        let minDistance = Infinity;
+    // Stage 1: 貪欲法で初期解
+    let bestOrder = greedyOrder(dist, n);
 
-        remainingWaypoints.forEach((wp, index) => {
-            const [wpLng, wpLat] = wp.geometry.coordinates;
-            const distance = calculateDistance(currentLat, currentLng, wpLat, wpLng);
-            if (distance < minDistance) {
-                minDistance = distance;
-                nearestIndex = index;
-            }
-        });
-
-        const nearestWaypoint = remainingWaypoints.splice(nearestIndex, 1)[0];
-        optimizedWaypoints.push(nearestWaypoint);
-        [currentLng, currentLat] = nearestWaypoint.geometry.coordinates;
+    // Stage 2: 分枝限定法。中間点数が閾値以下のときのみ厳密最適解を狙う。
+    // 閾値超過 or 時間上限到達時は Stage 3 にフォールバック。
+    const BB_THRESHOLD = 18;
+    const BB_TIME_BUDGET_MS = 200;
+    if (n <= BB_THRESHOLD) {
+        bestOrder = branchAndBound(dist, n, bestOrder, BB_TIME_BUDGET_MS);
     }
 
+    // Stage 3: 2-opt 改善（時間/反復上限付き）。Stage 2 で厳密解が得られていれば変化なし。
+    const TWO_OPT_TIME_BUDGET_MS = 200;
+    const TWO_OPT_MAX_PASSES = 100;
+    bestOrder = twoOptImprove(dist, bestOrder, TWO_OPT_TIME_BUDGET_MS, TWO_OPT_MAX_PASSES);
+
+    // bestOrder の値（dist インデックス 1..n）を waypoints インデックス（0..n-1）に変換
+    const optimizedWaypoints = bestOrder.map(idx => waypoints[idx - 1]);
     optimizedWaypoints.forEach((wp, index) => {
         wp.properties.waypoint_number = (index + 1).toString();
     });
