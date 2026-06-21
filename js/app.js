@@ -44,7 +44,7 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
             SpotEditor.resetSpotHighlight();
 
             if (SpotEditor.isAddMoveSpotMode) {
-                SpotEditor.exitAddMoveSpotMode(map);
+                SpotEditor.exitAddMoveSpotMode(map, spotMarkerMap);
             }
 
             document.getElementById('spotSelect').value = '';
@@ -73,7 +73,7 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
             ClosureEditor.resetClosureHighlight();
 
             if (ClosureEditor.isAddMoveClosureMode) {
-                ClosureEditor.exitAddMoveClosureMode(map);
+                ClosureEditor.exitAddMoveClosureMode(map, closureMarkerMap);
             }
 
             document.getElementById('closureSelect').value = '';
@@ -407,7 +407,7 @@ document.getElementById('spotCategory').addEventListener('change', function () {
 document.getElementById('addMoveSpotBtn').addEventListener('click', function () {
     // 既に追加・移動モードの場合は解除
     if (SpotEditor.isAddMoveSpotMode) {
-        SpotEditor.exitAddMoveSpotMode(map);
+        SpotEditor.exitAddMoveSpotMode(map, spotMarkerMap);
         showMessage('追加・移動モードを解除しました', 'success');
         return;
     }
@@ -427,15 +427,9 @@ document.getElementById('addMoveSpotBtn').addEventListener('click', function () 
     SpotEditor.setIsAddMoveSpotMode(true);
     this.classList.add('active');
 
-    // スポットが選択されている場合は移動モードとして動作
-    if (SpotEditor.selectedSpotFeature && SpotEditor.selectedSpotMarker) {
-        // スポットマーカーをドラッグ可能にする
-        SpotEditor.makeSpotDraggable(SpotEditor.selectedSpotMarker, SpotEditor.selectedSpotFeature);
-        showMessage('スポットをドラッグして移動できます。\n地図をクリックで新しいスポットを追加できます。\nボタンをもう一度クリックで解除', 'success');
-    } else {
-        // スポットが選択されていない場合は追加モードのみ
-        showMessage('地図上をクリックして新しいスポットを追加してください。\nボタンをもう一度クリックで解除', 'success');
-    }
+    // 全てのスポットをドラッグ可能にする（任意のスポットを直接掴んで移動できる）
+    SpotEditor.enableAllSpotDragging(spotMarkerMap);
+    showMessage('スポットをドラッグして移動できます。\n地図をクリックで新しいスポットを追加できます。\nボタンをもう一度クリックで解除', 'success');
 
     // カーソルを十字に変更
     map.getContainer().style.cursor = 'crosshair';
@@ -473,7 +467,7 @@ document.getElementById('deleteSpotBtn').addEventListener('click', function () {
 
     // 他のモードが有効な場合は解除
     if (SpotEditor.isAddMoveSpotMode) {
-        SpotEditor.exitAddMoveSpotMode(map);
+        SpotEditor.exitAddMoveSpotMode(map, spotMarkerMap);
     }
     if (SpotEditor.isExtractDuplicateMode) {
         SpotEditor.exitExtractDuplicateMode(map, spotMarkerMap);
@@ -537,7 +531,7 @@ document.getElementById('extractDuplicateSpotsBtn').addEventListener('click', fu
 
     // 他のスポットモードが有効な場合は解除
     if (SpotEditor.isAddMoveSpotMode) {
-        SpotEditor.exitAddMoveSpotMode(map);
+        SpotEditor.exitAddMoveSpotMode(map, spotMarkerMap);
     }
 
     SpotEditor.enterExtractDuplicateMode(map, spotMarkerMap, getLoadedData, geoJsonLayer);
@@ -801,7 +795,7 @@ document.querySelectorAll('input[name="closureReason"]').forEach(radio => {
 document.getElementById('addMoveClosureBtn').addEventListener('click', function () {
     // 既に追加・移動モードの場合は解除
     if (ClosureEditor.isAddMoveClosureMode) {
-        ClosureEditor.exitAddMoveClosureMode(map);
+        ClosureEditor.exitAddMoveClosureMode(map, closureMarkerMap);
         showMessage('追加・移動モードを解除しました', 'success');
         return;
     }
@@ -815,13 +809,9 @@ document.getElementById('addMoveClosureBtn').addEventListener('click', function 
     ClosureEditor.setIsAddMoveClosureMode(true);
     this.classList.add('active');
 
-    // 地点が選択されている場合は移動モードとしても動作
-    if (ClosureEditor.selectedClosureFeature && ClosureEditor.selectedClosureMarker) {
-        ClosureEditor.makeClosureDraggable(ClosureEditor.selectedClosureMarker, ClosureEditor.selectedClosureFeature);
-        showMessage('地点をドラッグして移動できます。\n地図をクリックで新しい地点を追加できます。\nボタンをもう一度クリックで解除', 'success');
-    } else {
-        showMessage('地図上をクリックして新しい地点を追加してください。\nボタンをもう一度クリックで解除', 'success');
-    }
+    // 全ての登録地点をドラッグ可能にする（任意の地点を直接掴んで移動できる）
+    ClosureEditor.enableAllClosureDragging(closureMarkerMap);
+    showMessage('地点をドラッグして移動できます。\n地図をクリックで新しい地点を追加できます。\nボタンをもう一度クリックで解除', 'success');
 
     // カーソルを十字に変更
     map.getContainer().style.cursor = 'crosshair';
@@ -858,7 +848,7 @@ document.getElementById('deleteClosureBtn').addEventListener('click', function (
 
     // 追加・移動モードが有効な場合は解除
     if (ClosureEditor.isAddMoveClosureMode) {
-        ClosureEditor.exitAddMoveClosureMode(map);
+        ClosureEditor.exitAddMoveClosureMode(map, closureMarkerMap);
     }
 
     // 削除対象を保持

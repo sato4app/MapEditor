@@ -166,24 +166,26 @@ function closureShapeHtml(kind, color) {
     const size = style.radius;
     const opacity = style.fillOpacity;
 
+    // 透明な背景矩形でアイコン全体をクリック・ドラッグの当たり領域にする
+    // （×印のように描画部分が細い形状でも、アイコン全域を掴めるようにするため）
+    const hitArea = `<rect x="0" y="0" width="${size}" height="${size}" fill="transparent" pointer-events="all" />`;
+
+    let shape;
     if (kind === 'closed') {
         // ×印（2本の交差線）
-        return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="opacity: ${opacity}; display: block;">`
-            + `<line x1="1.5" y1="1.5" x2="${size - 1.5}" y2="${size - 1.5}" stroke="${color}" stroke-width="3" stroke-linecap="round" />`
-            + `<line x1="${size - 1.5}" y1="1.5" x2="1.5" y2="${size - 1.5}" stroke="${color}" stroke-width="3" stroke-linecap="round" />`
-            + `</svg>`;
-    }
-    if (kind === 'difficult') {
+        shape = `<line x1="1.5" y1="1.5" x2="${size - 1.5}" y2="${size - 1.5}" stroke="${color}" stroke-width="3" stroke-linecap="round" />`
+            + `<line x1="${size - 1.5}" y1="1.5" x2="1.5" y2="${size - 1.5}" stroke="${color}" stroke-width="3" stroke-linecap="round" />`;
+    } else if (kind === 'difficult') {
         // 三角形（頂点を上にした警告形状）
-        return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="opacity: ${opacity}; display: block;">`
-            + `<polygon points="${size / 2},0.5 ${size - 0.5},${size - 0.5} 0.5,${size - 0.5}" fill="${color}" />`
-            + `</svg>`;
+        shape = `<polygon points="${size / 2},0.5 ${size - 0.5},${size - 0.5} 0.5,${size - 0.5}" fill="${color}" />`;
+    } else {
+        // ？（未選択・疑問符）
+        shape = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" `
+            + `font-family="sans-serif" font-size="${size + 1}" font-weight="bold" fill="${color}">?</text>`;
     }
-    // ？（未選択・疑問符）
+
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="opacity: ${opacity}; display: block;">`
-        + `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" `
-        + `font-family="sans-serif" font-size="${size + 1}" font-weight="bold" fill="${color}">?</text>`
-        + `</svg>`;
+        + hitArea + shape + `</svg>`;
 }
 
 // 区分（kind）に応じたマーカーアイコン（L.divIcon）を生成
@@ -233,6 +235,7 @@ export function createClosureMarker(feature, closureMarkerMap, geoJsonLayer) {
     const kind = feature.properties && feature.properties.kind;
 
     const marker = L.marker([lat, lng], {
+        draggable: true,
         icon: buildClosureIcon(kind, style.fillColor)
     });
 
@@ -251,6 +254,12 @@ export function createClosureMarker(feature, closureMarkerMap, geoJsonLayer) {
 
     marker.feature = feature;
     geoJsonLayer.addLayer(marker);
+
+    // 既定はドラッグ無効。追加・移動モード中に生成された場合のみドラッグ可能にする
+    if (marker.dragging) marker.dragging.disable();
+    if (isAddMoveClosureMode) {
+        makeClosureDraggable(marker, feature);
+    }
 
     if (closureMarkerMap) {
         closureMarkerMap.set(feature, marker);
@@ -310,15 +319,7 @@ export function highlightClosure(closureIndex, closureMarkerMap) {
     applyClosureColor(layer, CLOSURE_HIGHLIGHT_COLOR);
 
     if (isAddMoveClosureMode) {
-        if (draggableClosureMarker && draggableClosureMarker !== selectedClosureMarker) {
-            if (draggableClosureMarker.dragging) {
-                draggableClosureMarker.dragging.disable();
-            }
-            const element = draggableClosureMarker.getElement && draggableClosureMarker.getElement();
-            if (element) {
-                element.style.cursor = '';
-            }
-        }
+        // 追加・移動モード中は全地点がドラッグ可能。選択地点も確実に有効化しておく
         makeClosureDraggable(selectedClosureMarker, selectedClosureFeature);
     }
 }
@@ -428,8 +429,12 @@ export function makeClosureDraggable(marker, feature) {
         }
     }
 
-    marker.dragging = marker.dragging || new L.Handler.MarkerDrag(marker);
-    marker.dragging.enable();
+    // マーカーは draggable:true で生成済みのため dragging ハンドラは存在する。有効化のみ行う
+    if (marker.dragging) marker.dragging.enable();
+
+    // ドラッグハンドラはマーカーごとに1度だけ登録（モード再入時の二重登録を防ぐ）
+    if (marker._closureDragBound) return;
+    marker._closureDragBound = true;
 
     marker.on('drag', function () {
         const newLatLng = marker.getLatLng();
@@ -450,8 +455,27 @@ export function makeClosureDraggable(marker, feature) {
     });
 }
 
+// 追加・移動モード中、全ての登録地点マーカーをドラッグ可能にする
+// （任意の地点を直接掴んで移動できるようにする）
+export function enableAllClosureDragging(closureMarkerMap) {
+    if (!closureMarkerMap) return;
+    closureMarkerMap.forEach((marker, feature) => {
+        makeClosureDraggable(marker, feature);
+    });
+}
+
+// 全ての登録地点マーカーのドラッグを無効化する
+export function disableAllClosureDragging(closureMarkerMap) {
+    if (!closureMarkerMap) return;
+    closureMarkerMap.forEach((marker) => {
+        if (marker.dragging) marker.dragging.disable();
+        const element = marker.getElement && marker.getElement();
+        if (element) element.style.cursor = '';
+    });
+}
+
 // 追加・移動モードを解除
-export function exitAddMoveClosureMode(map) {
+export function exitAddMoveClosureMode(map, closureMarkerMap) {
     if (!isAddMoveClosureMode) return;
 
     setIsAddMoveClosureMode(false);
@@ -464,16 +488,9 @@ export function exitAddMoveClosureMode(map) {
         setClosureMapClickHandler(null);
     }
 
-    if (draggableClosureMarker) {
-        if (draggableClosureMarker.dragging) {
-            draggableClosureMarker.dragging.disable();
-        }
-        const element = draggableClosureMarker.getElement && draggableClosureMarker.getElement();
-        if (element) {
-            element.style.cursor = '';
-        }
-        setDraggableClosureMarker(null);
-    }
+    // 全ての登録地点のドラッグを無効化
+    disableAllClosureDragging(closureMarkerMap);
+    setDraggableClosureMarker(null);
 
     map.getContainer().style.cursor = '';
 }

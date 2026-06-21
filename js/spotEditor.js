@@ -164,15 +164,7 @@ export function highlightSpot(spotIndex, spotMarkerMap) {
     }
 
     if (isAddMoveSpotMode) {
-        if (draggableSpotMarker && draggableSpotMarker !== selectedSpotMarker) {
-            if (draggableSpotMarker.dragging) {
-                draggableSpotMarker.dragging.disable();
-            }
-            const element = draggableSpotMarker.getElement && draggableSpotMarker.getElement();
-            if (element) {
-                element.style.cursor = '';
-            }
-        }
+        // 追加・移動モード中は全スポットがドラッグ可能。選択スポットも確実に有効化しておく
         makeSpotDraggable(selectedSpotMarker, selectedSpotFeature);
     }
 }
@@ -252,6 +244,7 @@ export function addSpotToMap(latlng, loadedData, spotMarkerMap, geoJsonLayer) {
 
     const style = DEFAULTS.FEATURE_STYLES['spot'];
     const marker = L.marker(latlng, {
+        draggable: true,
         icon: L.divIcon({
             className: 'square-marker',
             html: `<div style="width: ${style.radius}px; height: ${style.radius}px; background-color: ${style.fillColor}; opacity: ${style.fillOpacity};"></div>`,
@@ -259,6 +252,9 @@ export function addSpotToMap(latlng, loadedData, spotMarkerMap, geoJsonLayer) {
             iconAnchor: [style.radius / 2, style.radius / 2]
         })
     }).addTo(geoJsonLayer);
+
+    // 既定はドラッグ無効（追加・移動モードでのみ有効化する）
+    if (marker.dragging) marker.dragging.disable();
 
     marker.bindPopup(`${newSpotName}<br>(Spot)`);
 
@@ -307,8 +303,12 @@ export function makeSpotDraggable(marker, feature) {
         }
     }
 
-    marker.dragging = marker.dragging || new L.Handler.MarkerDrag(marker);
-    marker.dragging.enable();
+    // マーカーは draggable:true で生成済みのため dragging ハンドラは存在する。有効化のみ行う
+    if (marker.dragging) marker.dragging.enable();
+
+    // ドラッグハンドラはマーカーごとに1度だけ登録（モード再入時の二重登録を防ぐ）
+    if (marker._spotDragBound) return;
+    marker._spotDragBound = true;
 
     marker.on('drag', function(e) {
         const newLatLng = marker.getLatLng();
@@ -326,8 +326,27 @@ export function makeSpotDraggable(marker, feature) {
     });
 }
 
+// 追加・移動モード中、全てのスポットマーカーをドラッグ可能にする
+// （任意のスポットを直接掴んで移動できるようにする）
+export function enableAllSpotDragging(spotMarkerMap) {
+    if (!spotMarkerMap) return;
+    spotMarkerMap.forEach((marker, feature) => {
+        makeSpotDraggable(marker, feature);
+    });
+}
+
+// 全てのスポットマーカーのドラッグを無効化する
+export function disableAllSpotDragging(spotMarkerMap) {
+    if (!spotMarkerMap) return;
+    spotMarkerMap.forEach((marker) => {
+        if (marker.dragging) marker.dragging.disable();
+        const element = marker.getElement && marker.getElement();
+        if (element) element.style.cursor = '';
+    });
+}
+
 // 追加・移動モードを解除
-export function exitAddMoveSpotMode(map) {
+export function exitAddMoveSpotMode(map, spotMarkerMap) {
     if (!isAddMoveSpotMode) return;
 
     setIsAddMoveSpotMode(false);
@@ -340,16 +359,9 @@ export function exitAddMoveSpotMode(map) {
         setSpotMapClickHandler(null);
     }
 
-    if (draggableSpotMarker) {
-        if (draggableSpotMarker.dragging) {
-            draggableSpotMarker.dragging.disable();
-        }
-        const element = draggableSpotMarker.getElement && draggableSpotMarker.getElement();
-        if (element) {
-            element.style.cursor = '';
-        }
-        setDraggableSpotMarker(null);
-    }
+    // 全てのスポットのドラッグを無効化
+    disableAllSpotDragging(spotMarkerMap);
+    setDraggableSpotMarker(null);
 
     map.getContainer().style.cursor = '';
 }

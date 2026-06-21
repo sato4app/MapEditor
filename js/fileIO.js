@@ -4,7 +4,7 @@ import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateIso, getDateTimeIso } from './stats.js';
 import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, state as routeEditorState } from './routeEditor.js';
-import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode } from './spotEditor.js';
+import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 import { extractClosures, updateClosureDropdown, createClosureMarker, nextClosureId } from './closureEditor.js';
 
@@ -240,6 +240,8 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 if (geomType === 'LineString') return selection.route;
                 if (geomType === 'Polygon' || geomType === 'MultiPolygon') return selection.area;
                 if (geomType === 'Point') {
+                    // 通行止め・通行困難場所は専用の入出力で扱うため、統合GeoJSON読み込みでは取り込まない
+                    if (type === 'closure') return false;
                     if (type === 'spot') return selection.spot;
                     if (type === 'route_waypoint') return selection.route;
                     if (type === 'point' || type === 'ポイントGPS') return selection.point;
@@ -362,7 +364,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                         iconAnchor: [5, 5]
                     });
 
-                    const marker = L.marker([lat, lng], { icon: icon });
+                    const marker = L.marker([lat, lng], { draggable: true, icon: icon });
 
                     marker.bindPopup(`${props.name || 'スポット'}<br>(Spot)`);
 
@@ -381,6 +383,12 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     });
 
                     geoJsonLayer.addLayer(marker);
+
+                    // 既定はドラッグ無効。追加・移動モード中に読み込まれた場合のみ有効化する
+                    if (marker.dragging) marker.dragging.disable();
+                    if (isAddMoveSpotMode) {
+                        makeSpotDraggable(marker, f);
+                    }
 
                     if (spotMarkerMap) {
                         spotMarkerMap.set(f, marker);
@@ -738,7 +746,9 @@ export function setupFileExport() {
                 ...loadedDataInternal.features.filter(f =>
                     !(f.properties && (
                         (f.properties.type === 'route_waypoint' && f.geometry && f.geometry.type === 'Point') ||
-                        (f.properties.type === 'route' && f.geometry && f.geometry.type === 'LineString')
+                        (f.properties.type === 'route' && f.geometry && f.geometry.type === 'LineString') ||
+                        // 通行止め・通行困難場所は専用の「ファイル出力」で個別に出力する（統合GeoJSONには含めない）
+                        (f.properties.type === 'closure')
                     ))
                 ),
                 ...routeLineFeatures
