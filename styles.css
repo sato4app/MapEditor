@@ -745,7 +745,7 @@ button:hover {
     width: auto;
     margin: 0;
     box-sizing: border-box;
-    padding: 8px 12px;
+    padding: 8px 8px;
     text-align: center;
     font-size: 12px;
     white-space: nowrap;
