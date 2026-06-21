@@ -751,6 +751,20 @@ document.getElementById('selectedClosureName').addEventListener('blur', function
     showMessage('登録地点名を更新しました', 'success');
 });
 
+// 備考（note）のフォーカス離脱時の処理
+document.getElementById('closureNote').addEventListener('blur', function () {
+    if (!ClosureEditor.selectedClosureFeature || !ClosureEditor.selectedClosureFeature.properties) return;
+
+    const newNote = this.value.trim();
+    const currentNote = ClosureEditor.selectedClosureFeature.properties.note || '';
+    if (newNote === currentNote) return;
+
+    ClosureEditor.selectedClosureFeature.properties.note = newNote;
+    ClosureEditor.touchUpdatedAt(ClosureEditor.selectedClosureFeature);
+
+    showMessage('備考を更新しました', 'success');
+});
+
 // 区分（kind）ラジオボタンの変更イベントリスナー
 document.querySelectorAll('input[name="closureKind"]').forEach(radio => {
     radio.addEventListener('change', function () {

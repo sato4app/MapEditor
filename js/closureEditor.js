@@ -302,6 +302,7 @@ export function highlightClosure(closureIndex, closureMarkerMap) {
 
     const props = closure.feature.properties || {};
     document.getElementById('selectedClosureName').value = closure.name;
+    document.getElementById('closureNote').value = props.note || '';
     setKindRadios(props.kind || '');
     setReasonRadios(props.reason || '');
 
@@ -326,6 +327,8 @@ export function highlightClosure(closureIndex, closureMarkerMap) {
 export function clearClosureInputs() {
     const nameInput = document.getElementById('selectedClosureName');
     if (nameInput) nameInput.value = '';
+    const noteInput = document.getElementById('closureNote');
+    if (noteInput) noteInput.value = '';
     setKindRadios('');
     setReasonRadios('');
 }
