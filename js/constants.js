@@ -79,7 +79,8 @@ export const DEFAULTS = {
             fillOpacity: 0.8,
             shape: 'square'
         },
-        // 通行止め・通行困難場所: 赤色(#e60000)、正方形、12x12px（枠なし）
+        // 通行止め・通行困難場所: 赤色(#e60000)、12x12px（枠なし）
+        // 形状は区分(kind)で変化: 通行止め=×印 / 通行困難=三角形 / 未選択=？
         'closure': {
             radius: 12,
             fillColor: '#e60000',

@@ -792,7 +792,7 @@ async function saveBlobAsFile(blob, filename) {
 }
 
 // closureフィーチャーのプロパティを正規化（読み込み時）
-// idが無ければ採番、kind/statusが無ければ既定値を補う
+// idが無ければ採番、不正なkind（unknown等）は未選択（？）扱いに、statusは常にdraft
 function normalizeImportedClosure(feature, existingIds) {
     const props = feature.properties || (feature.properties = {});
     props.type = 'closure';
@@ -801,11 +801,9 @@ function normalizeImportedClosure(feature, existingIds) {
         props.id = nextClosureId(existingIds);
     }
     if (props.kind !== 'closed' && props.kind !== 'difficult') {
-        props.kind = 'closed';
+        props.kind = '';
     }
-    if (props.status !== 'draft' && props.status !== 'published') {
-        props.status = 'draft';
-    }
+    props.status = 'draft';
     return feature;
 }
 
@@ -896,10 +894,11 @@ function buildClosureExportFeature(feature) {
         type: 'closure',
         id: p.id || '',
         name: p.name || '',
-        kind: (p.kind === 'difficult') ? 'difficult' : 'closed'
+        kind: (p.kind === 'closed' || p.kind === 'difficult') ? p.kind : 'unknown'
     };
     if (p.reason) props.reason = p.reason;
-    props.status = (p.status === 'published') ? 'published' : 'draft';
+    // 状態は常にテスト中(draft)として出力する
+    props.status = 'draft';
     if (p.note) props.note = p.note;
     if (p.relatedRoute) props.relatedRoute = p.relatedRoute;
     props.updatedAt = p.updatedAt || getDateIso();

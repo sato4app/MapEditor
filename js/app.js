@@ -759,6 +759,8 @@ document.querySelectorAll('input[name="closureKind"]').forEach(radio => {
         if (ClosureEditor.selectedClosureFeature.properties) {
             ClosureEditor.selectedClosureFeature.properties.kind = this.value;
         }
+        // 区分に応じてマーカーの形状を更新（選択中はハイライト色を維持）
+        ClosureEditor.refreshSelectedClosureIcon();
         ClosureEditor.touchUpdatedAt(ClosureEditor.selectedClosureFeature);
         ClosureEditor.updateClosurePopup(ClosureEditor.selectedClosureFeature, closureMarkerMap);
 
@@ -778,20 +780,6 @@ document.querySelectorAll('input[name="closureReason"]').forEach(radio => {
         ClosureEditor.updateClosurePopup(ClosureEditor.selectedClosureFeature, closureMarkerMap);
 
         showMessage('登録理由を更新しました', 'success');
-    });
-});
-
-// 状態（status）ラジオボタンの変更イベントリスナー
-document.querySelectorAll('input[name="closureStatus"]').forEach(radio => {
-    radio.addEventListener('change', function () {
-        if (!ClosureEditor.selectedClosureFeature) return;
-
-        if (ClosureEditor.selectedClosureFeature.properties) {
-            ClosureEditor.selectedClosureFeature.properties.status = this.value;
-        }
-        ClosureEditor.touchUpdatedAt(ClosureEditor.selectedClosureFeature);
-
-        showMessage('状態を更新しました', 'success');
     });
 });
 

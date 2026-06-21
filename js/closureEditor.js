@@ -149,20 +149,6 @@ export function getSelectedReason() {
     return checked ? checked.value : '';
 }
 
-// 状態（status）ラジオボタンの設定
-export function setStatusRadios(value) {
-    const radios = document.querySelectorAll('input[name="closureStatus"]');
-    radios.forEach(radio => {
-        radio.checked = (radio.value === value);
-    });
-}
-
-// 選択中の状態（status）を取得
-export function getSelectedStatus() {
-    const checked = document.querySelector('input[name="closureStatus"]:checked');
-    return checked ? checked.value : '';
-}
-
 // 区分（kind）の表示用ラベル
 function kindLabel(kind) {
     if (kind === 'closed') return '通行止め';
@@ -170,19 +156,61 @@ function kindLabel(kind) {
     return '';
 }
 
-// マーカーの色を変更（選択時のハイライト・既定色リセット共通）
+// 選択中マーカーのハイライト色（アクア）
+const CLOSURE_HIGHLIGHT_COLOR = '#00ffff';
+
+// 区分（kind）に応じたマーカー形状のHTMLを生成
+// closed: ×印 / difficult: 三角形 / 未選択: ？（疑問符）
+function closureShapeHtml(kind, color) {
+    const style = DEFAULTS.FEATURE_STYLES['closure'];
+    const size = style.radius;
+    const opacity = style.fillOpacity;
+
+    if (kind === 'closed') {
+        // ×印（2本の交差線）
+        return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="opacity: ${opacity}; display: block;">`
+            + `<line x1="1.5" y1="1.5" x2="${size - 1.5}" y2="${size - 1.5}" stroke="${color}" stroke-width="3" stroke-linecap="round" />`
+            + `<line x1="${size - 1.5}" y1="1.5" x2="1.5" y2="${size - 1.5}" stroke="${color}" stroke-width="3" stroke-linecap="round" />`
+            + `</svg>`;
+    }
+    if (kind === 'difficult') {
+        // 三角形（頂点を上にした警告形状）
+        return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="opacity: ${opacity}; display: block;">`
+            + `<polygon points="${size / 2},0.5 ${size - 0.5},${size - 0.5} 0.5,${size - 0.5}" fill="${color}" />`
+            + `</svg>`;
+    }
+    // ？（未選択・疑問符）
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="opacity: ${opacity}; display: block;">`
+        + `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" `
+        + `font-family="sans-serif" font-size="${size + 1}" font-weight="bold" fill="${color}">?</text>`
+        + `</svg>`;
+}
+
+// 区分（kind）に応じたマーカーアイコン（L.divIcon）を生成
+function buildClosureIcon(kind, color) {
+    const size = DEFAULTS.FEATURE_STYLES['closure'].radius;
+    return L.divIcon({
+        className: 'closure-marker',
+        html: closureShapeHtml(kind, color),
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2]
+    });
+}
+
+// マーカーの色・形状を更新（選択時のハイライト・既定色リセット共通）
+// kindに応じた形状を保ったままアイコン要素の中身を差し替える（setIconを使わずドラッグ状態を維持）
 function applyClosureColor(marker, color) {
-    if (!marker) return;
-    if (marker.getElement) {
-        const element = marker.getElement();
-        if (element) {
-            const div = element.querySelector('div');
-            if (div) {
-                div.style.setProperty('background-color', color, 'important');
-            }
-        }
-    } else if (marker.setStyle) {
-        marker.setStyle({ fillColor: color, color: color });
+    if (!marker || !marker.getElement) return;
+    const element = marker.getElement();
+    if (!element) return;
+    const kind = marker.feature && marker.feature.properties && marker.feature.properties.kind;
+    element.innerHTML = closureShapeHtml(kind, color);
+}
+
+// 選択中マーカーのアイコンを現在の区分（kind）で再描画（ハイライト色を維持）
+export function refreshSelectedClosureIcon() {
+    if (selectedClosureMarker) {
+        applyClosureColor(selectedClosureMarker, CLOSURE_HIGHLIGHT_COLOR);
     }
 }
 
@@ -202,14 +230,10 @@ export function createClosureMarker(feature, closureMarkerMap, geoJsonLayer) {
 
     const [lng, lat] = feature.geometry.coordinates;
     const style = DEFAULTS.FEATURE_STYLES['closure'];
+    const kind = feature.properties && feature.properties.kind;
 
     const marker = L.marker([lat, lng], {
-        icon: L.divIcon({
-            className: 'closure-marker',
-            html: `<div style="width: ${style.radius}px; height: ${style.radius}px; background-color: ${style.fillColor}; opacity: ${style.fillOpacity};"></div>`,
-            iconSize: [style.radius, style.radius],
-            iconAnchor: [style.radius / 2, style.radius / 2]
-        })
+        icon: buildClosureIcon(kind, style.fillColor)
     });
 
     marker.bindPopup(formatClosurePopup(feature));
@@ -280,10 +304,9 @@ export function highlightClosure(closureIndex, closureMarkerMap) {
     document.getElementById('selectedClosureName').value = closure.name;
     setKindRadios(props.kind || '');
     setReasonRadios(props.reason || '');
-    setStatusRadios(props.status || '');
 
     // ハイライト（アクア色）
-    applyClosureColor(layer, '#00ffff');
+    applyClosureColor(layer, CLOSURE_HIGHLIGHT_COLOR);
 
     if (isAddMoveClosureMode) {
         if (draggableClosureMarker && draggableClosureMarker !== selectedClosureMarker) {
@@ -305,7 +328,6 @@ export function clearClosureInputs() {
     if (nameInput) nameInput.value = '';
     setKindRadios('');
     setReasonRadios('');
-    setStatusRadios('');
 }
 
 // ハイライトのリセット（パラメータ付き）
