@@ -3,6 +3,7 @@
 import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateIso } from './stats.js';
+import { fetchElevation } from './elevation.js';
 
 // closure編集の状態管理
 export let allClosures = [];
@@ -98,6 +99,25 @@ export function nextClosureId(existingIds) {
 export function touchUpdatedAt(feature) {
     if (feature && feature.properties) {
         feature.properties.updatedAt = getDateIso();
+    }
+}
+
+// 地点の標高を国土地理院APIから取得し、座標の3番目の要素として付与する
+async function applyElevation(feature) {
+    if (!feature || !feature.geometry || !feature.geometry.coordinates) return;
+
+    const lng = feature.geometry.coordinates[0];
+    const lat = feature.geometry.coordinates[1];
+    const elevation = await fetchElevation(lat, lng);
+
+    if (elevation != null) {
+        // 取得中に位置が変わっている可能性があるため、最新の経度・緯度に標高を付与
+        const coords = feature.geometry.coordinates;
+        feature.geometry.coordinates = [coords[0], coords[1], elevation];
+        touchUpdatedAt(feature);
+        showMessage(`標高を取得しました（${elevation}m）`, 'success');
+    } else {
+        showMessage('標高の取得に失敗しました', 'warning');
     }
 }
 
@@ -310,7 +330,7 @@ export function resetClosureHighlight() {
 }
 
 // 新しい登録地点を追加
-export function addClosureToMap(latlng, loadedData, closureMarkerMap, geoJsonLayer) {
+export async function addClosureToMap(latlng, loadedData, closureMarkerMap, geoJsonLayer) {
     if (!loadedData) return;
 
     let closureNumber = 1;
@@ -365,6 +385,9 @@ export function addClosureToMap(latlng, loadedData, closureMarkerMap, geoJsonLay
     }
 
     updateStats(loadedData);
+
+    // 標高を取得して座標に付与（非同期。上の同期処理が完了してから実行される）
+    await applyElevation(newFeature);
 }
 
 // マーカーをドラッグ可能にする
@@ -390,13 +413,15 @@ export function makeClosureDraggable(marker, feature) {
         }
     });
 
-    marker.on('dragend', function () {
+    marker.on('dragend', async function () {
         const newLatLng = marker.getLatLng();
         if (feature.geometry && feature.geometry.coordinates) {
             feature.geometry.coordinates = [newLatLng.lng, newLatLng.lat];
         }
         touchUpdatedAt(feature);
         showMessage('登録地点の位置を更新しました', 'success');
+        // 移動後の位置で標高を再取得して付与
+        await applyElevation(feature);
     });
 }
 

@@ -569,6 +569,44 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
     });
 }
 
+// 座標値を小数点以下5桁に丸める（経度・緯度・標高を含む。ネスト構造に再帰対応）
+function roundCoord(value) {
+    if (typeof value === 'number') {
+        return Math.round(value * 100000) / 100000;
+    }
+    if (Array.isArray(value)) {
+        return value.map(roundCoord);
+    }
+    return value;
+}
+
+// ジオメトリ座標（およびルートのGPS座標プロパティ）を丸めた新しいFeatureを返す
+// 元のFeature/内部データは変更しない（読み込んだ精度はメモリ上では維持）
+function withRoundedGeometry(feature) {
+    if (!feature || !feature.geometry || !feature.geometry.coordinates) {
+        return feature;
+    }
+
+    const rounded = {
+        ...feature,
+        geometry: {
+            ...feature.geometry,
+            coordinates: roundCoord(feature.geometry.coordinates)
+        }
+    };
+
+    const props = feature.properties;
+    if (props && (props.startPointGPS || props.endPointGPS)) {
+        rounded.properties = {
+            ...props,
+            startPointGPS: props.startPointGPS ? roundCoord(props.startPointGPS) : props.startPointGPS,
+            endPointGPS: props.endPointGPS ? roundCoord(props.endPointGPS) : props.endPointGPS
+        };
+    }
+
+    return rounded;
+}
+
 // 距離計算ヘルパー (メートル単位近似値)
 function calculateTotalDistance(latLngs) {
     let total = 0;
@@ -693,6 +731,7 @@ export function setupFileExport() {
         });
 
         // 個別route_waypoint PointとLineString routeを除外し、生成したLineStringを追加
+        // 出力時は座標（経度・緯度・標高）を小数点以下5桁に丸める
         const exportData = {
             ...loadedDataInternal,
             features: [
@@ -703,7 +742,7 @@ export function setupFileExport() {
                     ))
                 ),
                 ...routeLineFeatures
-            ]
+            ].map(withRoundedGeometry)
         };
 
         const dataStr = JSON.stringify(exportData, null, 2);
@@ -865,10 +904,15 @@ function buildClosureExportFeature(feature) {
     if (p.relatedRoute) props.relatedRoute = p.relatedRoute;
     props.updatedAt = p.updatedAt || getDateIso();
 
+    // 座標（経度・緯度・標高）を小数点以下5桁に丸める
+    const geometry = (feature.geometry && feature.geometry.coordinates)
+        ? { ...feature.geometry, coordinates: roundCoord(feature.geometry.coordinates) }
+        : feature.geometry;
+
     return {
         type: 'Feature',
         properties: props,
-        geometry: feature.geometry
+        geometry: geometry
     };
 }
 
