@@ -731,22 +731,24 @@ button:hover {
     background-color: #0056b3;
 }
 
-/* 通行止めパネル下部のファイル入出力ボタン（横並び） */
+/* 通行止めパネル上部のファイル入出力ボタン（横並び・内容幅） */
 .closure-io-controls {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
-    margin-top: 10px;
+    margin-bottom: 15px;
 }
 
 .closure-io-controls .file-input-label,
 .closure-io-controls #exportClosureBtn {
-    flex: 1;
+    flex: 0 0 auto;
     width: auto;
     margin: 0;
     box-sizing: border-box;
-    padding: 8px 0;
+    padding: 8px 12px;
     text-align: center;
     font-size: 12px;
+    white-space: nowrap;
 }
 
 /* Leafletポップアップのスタイル */

@@ -165,6 +165,12 @@
             <div class="closure-panel" id="closurePanel">
                 <div class="closure-title">通行止め・通行困難場所情報</div>
 
+                <div class="closure-io-controls">
+                    <label for="closureFileInput" class="file-input-label" id="loadClosureBtn">ファイル読み込み</label>
+                    <input type="file" id="closureFileInput" accept=".geojson" style="display: none;" />
+                    <button id="exportClosureBtn">ファイル出力</button>
+                </div>
+
                 <div class="closure-count">
                     <span class="closure-label">登録地点数</span>
                     <input type="text" class="closure-count-input" id="closureCountDisplay" readonly>
@@ -219,12 +225,6 @@
                     <button class="closure-btn" id="addMoveClosureBtn">追加・移動</button>
                     <button class="closure-btn" id="deleteClosureBtn">削除</button>
                 </div>
-            </div>
-
-            <div class="closure-io-controls">
-                <label for="closureFileInput" class="file-input-label" id="loadClosureBtn">ファイル読み込み</label>
-                <input type="file" id="closureFileInput" accept=".geojson" style="display: none;" />
-                <button id="exportClosureBtn">ファイル出力</button>
             </div>
         </div>
 
