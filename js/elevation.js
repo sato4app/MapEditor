@@ -3,7 +3,7 @@
 // 国土地理院の標高API。指定した緯度経度の標高(メートル)を返す。
 // 取得できない場合（海上・データ無し・通信エラー）は null を返す。
 export async function fetchElevation(lat, lng) {
-    const url = `https://cyberjapandata.gsi.go.jp/general/dem/scripts/getelevation.php?lon=${lng}&lat=${lat}&outtype=JSON`;
+    const url = `https://cyberjapandata2.gsi.go.jp/general/dem/scripts/getelevation.php?lon=${lng}&lat=${lat}&outtype=JSON`;
 
     try {
         const response = await fetch(url);
