@@ -768,12 +768,6 @@ button:hover {
     overflow-wrap: break-word;
 }
 
-/* スポット名に含まれる改行(\n)をポップアップ内で改行として表示する
-   （HTMLは既定で改行を空白に畳むため、pre-lineで改行を活かす） */
-.leaflet-popup-content .popup-name {
-    white-space: pre-line;
-}
-
 /* エリア編集パネル */
 .area-panel {
     border: 2px solid #999;

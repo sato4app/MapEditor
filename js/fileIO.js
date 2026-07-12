@@ -4,7 +4,7 @@ import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateIso, getDateTimeIso } from './stats.js';
 import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, state as routeEditorState } from './routeEditor.js';
-import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable } from './spotEditor.js';
+import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, toSpotNameHtml } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 import { extractClosures, updateClosureDropdown, createClosureMarker, nextClosureId } from './closureEditor.js';
 
@@ -377,7 +377,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.marker([lat, lng], { draggable: true, icon: icon });
 
-                    marker.bindPopup(`<span class="popup-name">${props.name || 'スポット'}</span><br>(Spot)`);
+                    marker.bindPopup(`${toSpotNameHtml(props.name || 'スポット')}<br>(Spot)`);
 
                     // スポットモードでクリックしたときにドロップダウンと連動
                     marker.on('click', function(e) {
