@@ -3,7 +3,7 @@
 import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateIso, getDateTimeIso } from './stats.js';
-import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, state as routeEditorState } from './routeEditor.js';
+import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, state as routeEditorState } from './routeEditor.js';
 import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 import { extractClosures, updateClosureDropdown, createClosureMarker, nextClosureId } from './closureEditor.js';
@@ -135,6 +135,17 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
             this.value = '';
         }
     });
+}
+
+// マーカーをID/名称で markerMap に登録する
+// スポット名の改行(\n)がスペースに変換されている場合でも引けるよう、正規化したキーも登録する
+function registerMarkerKey(markerMap, key, marker) {
+    if (!markerMap || !key) return;
+    markerMap.set(key, marker);
+    const normalized = normalizeId(key);
+    if (normalized && normalized !== key) {
+        markerMap.set(normalized, marker);
+    }
 }
 
 // 読み込み種別選択モーダルを表示し、選択結果をPromiseで返す
@@ -328,7 +339,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const latLngs = coords.map(c => [c[1], c[0]]);
                     const routeId = props.id;
-                    const isEditableRoute = routeId && /^route_(.+)_to_(.+)$/.test(routeId);
+                    const isEditableRoute = !!parseRouteId(routeId);
 
                     if (isEditableRoute) {
                         // 編集用ルート: ポリラインで参考表示（変換処理でポイントGPS/route_waypointマーカーを別途作成）
@@ -366,7 +377,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.marker([lat, lng], { draggable: true, icon: icon });
 
-                    marker.bindPopup(`${props.name || 'スポット'}<br>(Spot)`);
+                    marker.bindPopup(`<span class="popup-name">${props.name || 'スポット'}</span><br>(Spot)`);
 
                     // スポットモードでクリックしたときにドロップダウンと連動
                     marker.on('click', function(e) {
@@ -396,8 +407,8 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     // markerMapにスポットを登録（ルート編集での開始・終了点ハイライト用）
                     if (markerMap) {
-                        if (props.name) markerMap.set(props.name, marker);
-                        if (props.id && props.id !== props.name) markerMap.set(props.id, marker);
+                        registerMarkerKey(markerMap, props.name, marker);
+                        if (props.id !== props.name) registerMarkerKey(markerMap, props.id, marker);
                     }
                 }
                 // エリア (type="area") -> Polygon
@@ -497,8 +508,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 const routeId = f.properties.id;
                 if (!routeId) return;
 
-                const match = routeId.match(/^route_(.+)_to_(.+)$/);
-                if (!match) return;
+                if (!parseRouteId(routeId)) return;
 
                 // 既に route_waypoint が存在する場合はスキップ（重複防止）
                 const alreadyHasWaypoints = data.features.some(feat =>
@@ -689,7 +699,7 @@ export function setupFileExport() {
 
             const spots = features.filter(f =>
                 f.properties && f.properties.type === 'spot' &&
-                (f.properties.id === id || f.properties.name === id) &&
+                (isSameId(f.properties.id, id) || isSameId(f.properties.name, id)) &&
                 f.geometry && f.geometry.type === 'Point'
             );
             if (spots.length === 1) return spots[0].geometry.coordinates;
@@ -713,9 +723,9 @@ export function setupFileExport() {
                 parseInt(a.properties.waypoint_number) - parseInt(b.properties.waypoint_number)
             );
             const coordinates = waypoints.map(wp => wp.geometry.coordinates);
-            const match = routeId.match(/^route_(.+)_to_(.+)$/);
-            const startPoint = match ? match[1] : '';
-            const endPoint = match ? match[2] : '';
+            const ids = parseRouteId(routeId);
+            const startPoint = ids ? ids.startId : '';
+            const endPoint = ids ? ids.endId : '';
 
             // 同名スポット解決のため、まず曖昧でない側を引き、その座標を相手側の参照に使う
             let endCoords = resolveCoordsById(endPoint, null);

@@ -3,6 +3,7 @@
 import { DEFAULTS, MODES, SPOT_CATEGORIES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats } from './stats.js';
+import { normalizeId } from './routeEditor.js';
 
 // スポット編集の状態管理
 export let allSpots = [];
@@ -134,7 +135,9 @@ export function highlightSpot(spotIndex, spotMarkerMap) {
         resetSpotHighlightWithParams(previousSpotMarker, previousSpotFeature);
     }
 
-    document.getElementById('selectedSpotName').value = spot.name;
+    // テキストボックスは改行を保持できないため、改行はスペースに変換して表示する
+    // （元の名称は feature 側にそのまま残す）
+    document.getElementById('selectedSpotName').value = normalizeId(spot.name);
 
     // スポット区分を表示
     const category = spot.feature.properties && spot.feature.properties.category;
@@ -256,7 +259,7 @@ export function addSpotToMap(latlng, loadedData, spotMarkerMap, geoJsonLayer) {
     // 既定はドラッグ無効（追加・移動モードでのみ有効化する）
     if (marker.dragging) marker.dragging.disable();
 
-    marker.bindPopup(`${newSpotName}<br>(Spot)`);
+    marker.bindPopup(`<span class="popup-name">${newSpotName}</span><br>(Spot)`);
 
     marker.on('click', function(e) {
         // 重複スポット抽出モード中はドロップダウン選択を行わない

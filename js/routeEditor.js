@@ -3,6 +3,36 @@
 import { DEFAULTS } from './constants.js';
 import { showMessage } from './message.js';
 
+// ルートID（route_{開始ID}_to_{終了ID}）の解析
+// 開始・終了がスポットの場合、そのスポット名に改行(\n)が含まれることがある。
+// 正規表現の「.」は改行にマッチしないため、任意の1文字を [\s\S] で表す。
+const ROUTE_ID_PATTERN = /^route_([\s\S]+)_to_([\s\S]+)$/;
+
+export function parseRouteId(routeId) {
+    if (typeof routeId !== 'string') return null;
+    const match = routeId.match(ROUTE_ID_PATTERN);
+    if (!match) return null;
+    return { startId: match[1], endId: match[2] };
+}
+
+// ID・名称の照合用に空白を正規化する（改行とスペースの表記ゆれを吸収）
+export function normalizeId(id) {
+    return typeof id === 'string' ? id.replace(/\s+/g, ' ').trim() : '';
+}
+
+// ID・名称が同一とみなせるか（改行とスペースの違いは無視）
+export function isSameId(a, b) {
+    if (a === b) return true;
+    const normalizedA = normalizeId(a);
+    return normalizedA !== '' && normalizedA === normalizeId(b);
+}
+
+// markerMap からマーカーを取得（改行とスペースの表記ゆれを吸収）
+function getMarkerById(markerMap, id) {
+    if (!markerMap || !id) return undefined;
+    return markerMap.get(id) || markerMap.get(normalizeId(id));
+}
+
 // ルート編集の状態管理
 export const state = {
     allPoints: [],
@@ -213,9 +243,7 @@ function getStartEndIds(routeId, loadedData) {
             }
         }
     }
-    const match = routeId.match(/^route_(.+)_to_(.+)$/);
-    if (!match) return null;
-    return { startId: match[1], endId: match[2] };
+    return parseRouteId(routeId);
 }
 
 // ポイントIDからフィーチャーを取得（ポイントGPS優先、スポットにフォールバック）
@@ -223,16 +251,18 @@ function getPointFeature(id, loadedData) {
     if (!loadedData || !loadedData.features) return null;
     return loadedData.features.find(f => f.properties && f.properties.type === 'ポイントGPS' && (f.properties.id === id || f.properties.pointId === id))
         || loadedData.features.find(f => f.properties && f.properties.type === 'point' && (f.properties.id === id || f.properties.pointId === id))
-        || loadedData.features.find(f => f.properties && f.properties.type === 'spot' && (f.properties.id === id || f.properties.name === id) && f.geometry && f.geometry.type === 'Point');
+        || findSpotsByNameOrId(id, loadedData)[0]
+        || null;
 }
 
 // スポットを名前またはIDで検索（全マッチを返す）
+// スポット名の改行(\n)がスペースに変換されている場合もあるため、空白の違いは無視して照合する
 function findSpotsByNameOrId(nameOrId, loadedData) {
     if (!loadedData || !loadedData.features) return [];
     return loadedData.features.filter(f =>
         f.properties && f.properties.type === 'spot' &&
         f.geometry && f.geometry.type === 'Point' &&
-        (f.properties.id === nameOrId || f.properties.name === nameOrId)
+        (isSameId(f.properties.id, nameOrId) || isSameId(f.properties.name, nameOrId))
     );
 }
 
@@ -372,8 +402,8 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
     const startId = ids.startId;
     const endId = ids.endId;
 
-    const startMarker = markerMap.get(startId);
-    const endMarker = markerMap.get(endId);
+    const startMarker = getMarkerById(markerMap, startId);
+    const endMarker = getMarkerById(markerMap, endId);
 
     // ポイントGPS・スポットはアクア、geojsonポイントはピンクでハイライト
     const startFeature = getPointFeature(startId, loadedData);
@@ -429,8 +459,8 @@ export function resetRouteHighlight(markerMap, map, loadedData) {
         const startId = ids.startId;
         const endId = ids.endId;
 
-        const startMarker = markerMap.get(startId);
-        const endMarker = markerMap.get(endId);
+        const startMarker = getMarkerById(markerMap, startId);
+        const endMarker = getMarkerById(markerMap, endId);
 
         // タイプに応じたデフォルトスタイルに戻す
         const startFeature = loadedData ? getPointFeature(startId, loadedData) : null;

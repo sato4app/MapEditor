@@ -296,10 +296,10 @@ document.getElementById('clearRouteBtn').addEventListener('click', async functio
     }
 
     // 開始・終了ポイントのマーカー色を元に戻す
-    const match = path.match(/^route_(.+)_to_(.+)$/);
-    if (match) {
-        const startId = match[1];
-        const endId = match[2];
+    const ids = RouteEditor.parseRouteId(path);
+    if (ids) {
+        const startId = ids.startId;
+        const endId = ids.endId;
 
         const startMarker = markerMap.get(startId);
         const endMarker = markerMap.get(endId);
@@ -365,6 +365,12 @@ document.getElementById('selectedSpotName').addEventListener('blur', function ()
     const newName = this.value.trim();
 
     if (!SpotEditor.selectedSpotFeature || !newName) return;
+
+    // テキストボックスは改行を保持できないため、表示名と同じ入力は「未編集」とみなす。
+    // ここで上書きすると、改行を含む名称（例: "昆虫館\n公園管理事務所"）が壊れ、
+    // その名称を開始・終了点に持つルートと結び付かなくなる
+    const currentName = (SpotEditor.selectedSpotFeature.properties && SpotEditor.selectedSpotFeature.properties.name) || '';
+    if (newName === RouteEditor.normalizeId(currentName)) return;
 
     // GeoJSONデータの名称を更新
     if (SpotEditor.selectedSpotFeature.properties) {
