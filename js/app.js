@@ -4,14 +4,13 @@ import { MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats } from './stats.js';
 import { initializeMap } from './mapCore.js';
-import { getLoadedData, initData, setupFileInput, setupFileExport, setupGeoJsonLoad, setupClosureFileLoad, setupClosureFileExport } from './fileIO.js';
+import { getLoadedData, initData, setupFileInput, setupFileExport, setupGeoJsonLoad } from './fileIO.js';
 import * as RouteEditor from './routeEditor.js';
 import * as SpotEditor from './spotEditor.js';
 import * as AreaEditor from './areaEditor.js';
-import * as ClosureEditor from './closureEditor.js';
 
 // 地図とレイヤーの初期化
-const { map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap, closureMarkerMap } = initializeMap();
+const { map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap } = initializeMap();
 
 // グローバルアクセス用（最適化関数で使用）
 window.geoJsonLayer = geoJsonLayer;
@@ -20,8 +19,6 @@ window.geoJsonLayer = geoJsonLayer;
 setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap);
 setupFileExport();
 setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap);
-setupClosureFileLoad(map, geoJsonLayer, closureMarkerMap);
-setupClosureFileExport();
 
 // モード切り替え処理
 document.querySelectorAll('input[name="mode"]').forEach(radio => {
@@ -68,31 +65,17 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
             if (nameInput) nameInput.value = '';
         }
 
-        // 通行止めモードから離れる場合、通行止め関連の状態をリセット
-        if (this.value !== MODES.CLOSURE) {
-            ClosureEditor.resetClosureHighlight();
-
-            if (ClosureEditor.isAddMoveClosureMode) {
-                ClosureEditor.exitAddMoveClosureMode(map, closureMarkerMap);
-            }
-
-            document.getElementById('closureSelect').value = '';
-            ClosureEditor.clearClosureInputs();
-        }
-
         // パネルの表示切り替え
         const fileIoContainer = document.getElementById('fileIoContainer');
         const routePanel = document.getElementById('routePanel');
         const spotPanel = document.getElementById('spotPanel');
         const areaPanel = document.getElementById('areaPanel');
-        const closurePanel = document.getElementById('closurePanelWrapper');
 
         // 一旦すべて非表示にし、選択モードのパネルのみ表示する
         fileIoContainer.style.display = 'none';
         routePanel.style.display = 'none';
         spotPanel.style.display = 'none';
         if (areaPanel) areaPanel.style.display = 'none';
-        if (closurePanel) closurePanel.style.display = 'none';
 
         if (this.value === MODES.GEOJSON) {
             fileIoContainer.style.display = 'block';
@@ -100,8 +83,6 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
             routePanel.style.display = 'block';
         } else if (this.value === MODES.SPOT) {
             spotPanel.style.display = 'block';
-        } else if (this.value === MODES.CLOSURE) {
-            if (closurePanel) closurePanel.style.display = 'block';
         } else if (this.value === MODES.AREA) {
             if (areaPanel) areaPanel.style.display = 'block';
         }
@@ -710,197 +691,3 @@ document.getElementById('deleteAreaBtn').addEventListener('click', function () {
 
     showMessage('エリアを削除しました', 'success');
 });
-
-// ========================================
-// 通行禁止・困難場所の指定モードのイベントハンドラー
-// ========================================
-
-// 登録地点ドロップダウンの変更イベントリスナー
-document.getElementById('closureSelect').addEventListener('change', function () {
-    ClosureEditor.highlightClosure(this.value, closureMarkerMap);
-});
-
-// 選択地点名のフォーカス離脱時の処理
-document.getElementById('selectedClosureName').addEventListener('blur', function () {
-    const newName = this.value.trim();
-
-    if (!ClosureEditor.selectedClosureFeature || !newName) return;
-
-    // GeoJSONデータの名称を更新
-    if (ClosureEditor.selectedClosureFeature.properties) {
-        ClosureEditor.selectedClosureFeature.properties.name = newName;
-    }
-    ClosureEditor.touchUpdatedAt(ClosureEditor.selectedClosureFeature);
-
-    // 現在の選択インデックスを取得
-    const closureSelect = document.getElementById('closureSelect');
-    const currentIndex = parseInt(closureSelect.value);
-
-    // allClosuresのデータを更新
-    if (ClosureEditor.allClosures[currentIndex]) {
-        ClosureEditor.allClosures[currentIndex].name = newName;
-    }
-
-    // ドロップダウンを更新して選択を維持
-    ClosureEditor.updateClosureDropdown();
-    closureSelect.value = currentIndex;
-
-    // マーカーのポップアップを更新
-    ClosureEditor.updateClosurePopup(ClosureEditor.selectedClosureFeature, closureMarkerMap);
-
-    showMessage('登録地点名を更新しました', 'success');
-});
-
-// 備考（note）のフォーカス離脱時の処理
-document.getElementById('closureNote').addEventListener('blur', function () {
-    if (!ClosureEditor.selectedClosureFeature || !ClosureEditor.selectedClosureFeature.properties) return;
-
-    const newNote = this.value.trim();
-    const currentNote = ClosureEditor.selectedClosureFeature.properties.note || '';
-    if (newNote === currentNote) return;
-
-    ClosureEditor.selectedClosureFeature.properties.note = newNote;
-    ClosureEditor.touchUpdatedAt(ClosureEditor.selectedClosureFeature);
-
-    showMessage('備考を更新しました', 'success');
-});
-
-// 区分（kind）ラジオボタンの変更イベントリスナー
-document.querySelectorAll('input[name="closureKind"]').forEach(radio => {
-    radio.addEventListener('change', function () {
-        if (!ClosureEditor.selectedClosureFeature) return;
-
-        if (ClosureEditor.selectedClosureFeature.properties) {
-            ClosureEditor.selectedClosureFeature.properties.kind = this.value;
-        }
-        // 区分に応じてマーカーの形状を更新（選択中はハイライト色を維持）
-        ClosureEditor.refreshSelectedClosureIcon();
-        ClosureEditor.touchUpdatedAt(ClosureEditor.selectedClosureFeature);
-        ClosureEditor.updateClosurePopup(ClosureEditor.selectedClosureFeature, closureMarkerMap);
-
-        showMessage('区分を更新しました', 'success');
-    });
-});
-
-// 登録理由（reason）ラジオボタンの変更イベントリスナー
-document.querySelectorAll('input[name="closureReason"]').forEach(radio => {
-    radio.addEventListener('change', function () {
-        if (!ClosureEditor.selectedClosureFeature) return;
-
-        if (ClosureEditor.selectedClosureFeature.properties) {
-            ClosureEditor.selectedClosureFeature.properties.reason = this.value;
-        }
-        ClosureEditor.touchUpdatedAt(ClosureEditor.selectedClosureFeature);
-        ClosureEditor.updateClosurePopup(ClosureEditor.selectedClosureFeature, closureMarkerMap);
-
-        showMessage('登録理由を更新しました', 'success');
-    });
-});
-
-// 追加・移動ボタン
-document.getElementById('addMoveClosureBtn').addEventListener('click', function () {
-    // 既に追加・移動モードの場合は解除
-    if (ClosureEditor.isAddMoveClosureMode) {
-        ClosureEditor.exitAddMoveClosureMode(map, closureMarkerMap);
-        showMessage('追加・移動モードを解除しました', 'success');
-        return;
-    }
-
-    // データが未読み込みの場合は初期化（新規追加できるようにする）
-    if (!getLoadedData()) {
-        initData();
-    }
-
-    // 追加・移動モードを開始
-    ClosureEditor.setIsAddMoveClosureMode(true);
-    this.classList.add('active');
-
-    // 全ての登録地点をドラッグ可能にする（任意の地点を直接掴んで移動できる）
-    ClosureEditor.enableAllClosureDragging(closureMarkerMap);
-    showMessage('地点をドラッグして移動できます。\n地図をクリックで新しい地点を追加できます。\nボタンをもう一度クリックで解除', 'success');
-
-    // カーソルを十字に変更
-    map.getContainer().style.cursor = 'crosshair';
-
-    // 地図クリックイベントを設定（地点追加用）
-    const closureHandler = function (e) {
-        if (!ClosureEditor.isAddMoveClosureMode) return;
-
-        ClosureEditor.addClosureToMap(e.latlng, getLoadedData(), closureMarkerMap, geoJsonLayer);
-
-        showMessage('地点を追加しました', 'success');
-    };
-
-    ClosureEditor.setClosureMapClickHandler(closureHandler);
-    map.on('click', closureHandler);
-});
-
-// 削除ボタン
-document.getElementById('deleteClosureBtn').addEventListener('click', function () {
-    // 地点が選択されていない場合
-    if (!ClosureEditor.selectedClosureFeature || !ClosureEditor.selectedClosureMarker) {
-        showMessage('削除する地点を選択してください', 'warning');
-        return;
-    }
-
-    // 地点名を取得
-    const closureName = ClosureEditor.selectedClosureFeature.properties && ClosureEditor.selectedClosureFeature.properties.name;
-
-    // 確認メッセージを表示
-    const confirmed = confirm(`地点「${closureName}」を削除しますか？`);
-    if (!confirmed) {
-        return;
-    }
-
-    // 追加・移動モードが有効な場合は解除
-    if (ClosureEditor.isAddMoveClosureMode) {
-        ClosureEditor.exitAddMoveClosureMode(map, closureMarkerMap);
-    }
-
-    // 削除対象を保持
-    const featureToDelete = ClosureEditor.selectedClosureFeature;
-    const markerToDelete = ClosureEditor.selectedClosureMarker;
-
-    // GeoJSONデータから削除
-    const data = getLoadedData();
-    if (data && data.features) {
-        const featureIndex = data.features.findIndex(f => f === featureToDelete);
-        if (featureIndex !== -1) {
-            data.features.splice(featureIndex, 1);
-        }
-    }
-
-    // 地図からマーカーを削除
-    if (markerToDelete) {
-        if (geoJsonLayer.hasLayer(markerToDelete)) {
-            geoJsonLayer.removeLayer(markerToDelete);
-        }
-        if (map.hasLayer(markerToDelete)) {
-            map.removeLayer(markerToDelete);
-        }
-    }
-
-    // closureMarkerMapから削除
-    closureMarkerMap.delete(featureToDelete);
-
-    // allClosuresから削除
-    const closureIndex = ClosureEditor.allClosures.findIndex(c => c.feature === featureToDelete);
-    if (closureIndex !== -1) {
-        ClosureEditor.allClosures.splice(closureIndex, 1);
-    }
-
-    // 選択状態をリセット
-    ClosureEditor.setSelectedClosureFeature(null);
-    ClosureEditor.setSelectedClosureMarker(null);
-
-    // ドロップダウンと統計を更新
-    ClosureEditor.updateClosureDropdown();
-    updateStats(getLoadedData());
-
-    // 入力をクリア
-    document.getElementById('closureSelect').value = '';
-    ClosureEditor.clearClosureInputs();
-
-    showMessage('地点を削除しました', 'success');
-});
-

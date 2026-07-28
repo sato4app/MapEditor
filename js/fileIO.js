@@ -2,11 +2,10 @@
 
 import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
-import { updateStats, getDateString, getDateIso, getDateTimeIso } from './stats.js';
+import { updateStats, getDateString } from './stats.js';
 import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, state as routeEditorState } from './routeEditor.js';
 import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, toSpotNameHtml } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
-import { extractClosures, updateClosureDropdown, createClosureMarker, nextClosureId } from './closureEditor.js';
 
 // ファイル入出力の状態管理
 let loadedDataInternal = null;
@@ -251,7 +250,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 if (geomType === 'LineString') return selection.route;
                 if (geomType === 'Polygon' || geomType === 'MultiPolygon') return selection.area;
                 if (geomType === 'Point') {
-                    // 通行止め・通行困難場所は専用の入出力で扱うため、統合GeoJSON読み込みでは取り込まない
+                    // 通行止め・通行困難場所（closure）はClosureEditorで扱うため、本アプリでは取り込まない
                     if (type === 'closure') return false;
                     if (type === 'spot') return selection.spot;
                     if (type === 'route_waypoint') return selection.route;
@@ -756,9 +755,7 @@ export function setupFileExport() {
                 ...loadedDataInternal.features.filter(f =>
                     !(f.properties && (
                         (f.properties.type === 'route_waypoint' && f.geometry && f.geometry.type === 'Point') ||
-                        (f.properties.type === 'route' && f.geometry && f.geometry.type === 'LineString') ||
-                        // 通行止め・通行困難場所は専用の「ファイル出力」で個別に出力する（統合GeoJSONには含めない）
-                        (f.properties.type === 'closure')
+                        (f.properties.type === 'route' && f.geometry && f.geometry.type === 'LineString')
                     ))
                 ),
                 ...routeLineFeatures
@@ -809,163 +806,4 @@ async function saveBlobAsFile(blob, filename) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     return true;
-}
-
-// closureフィーチャーのプロパティを正規化（読み込み時）
-// idが無ければ採番、不正なkind（unknown等）は未選択（？）扱いに、statusは常にdraft
-function normalizeImportedClosure(feature, existingIds) {
-    const props = feature.properties || (feature.properties = {});
-    props.type = 'closure';
-
-    if (!props.id) {
-        props.id = nextClosureId(existingIds);
-    }
-    if (props.kind !== 'closed' && props.kind !== 'difficult') {
-        props.kind = '';
-    }
-    props.status = 'draft';
-    return feature;
-}
-
-// 通行止め・通行困難場所のファイル読み込み（GeoJSONからclosureのみを抽出）
-export function setupClosureFileLoad(map, geoJsonLayer, closureMarkerMap) {
-    document.getElementById('closureFileInput').addEventListener('change', async function (e) {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-
-        let addedCount = 0;
-        let skippedCount = 0;
-        try {
-            const data = initData();
-
-            // 既存のclosure IDを収集（ID重複の検出・新規採番に使用）
-            const existingIds = new Set(
-                data.features
-                    .filter(f => f.properties && f.properties.type === 'closure' && f.properties.id)
-                    .map(f => f.properties.id)
-            );
-
-            for (const file of files) {
-                let json;
-                try {
-                    const text = await file.text();
-                    json = JSON.parse(text);
-                } catch (parseError) {
-                    showMessage(`読み込みエラー (${file.name}): ${parseError.message}`, 'error');
-                    continue;
-                }
-
-                if (!json.features || !Array.isArray(json.features)) {
-                    showMessage(`読み込みエラー (${file.name}): 有効なGeoJSONフォーマットではありません`, 'error');
-                    continue;
-                }
-
-                json.features.forEach(f => {
-                    if (!(f.properties && f.properties.type === 'closure' &&
-                          f.geometry && f.geometry.type === 'Point')) {
-                        return;
-                    }
-
-                    // 既存IDと重複する地点はスキップ（IDは全地点で一意）
-                    if (f.properties.id && existingIds.has(f.properties.id)) {
-                        skippedCount++;
-                        return;
-                    }
-
-                    normalizeImportedClosure(f, existingIds);
-                    existingIds.add(f.properties.id);
-
-                    data.features.push(f);
-                    createClosureMarker(f, closureMarkerMap, geoJsonLayer);
-                    addedCount++;
-                });
-            }
-
-            // ドロップダウン・件数・統計を更新
-            extractClosures(data);
-            updateClosureDropdown();
-            updateStats(data);
-
-            if (addedCount > 0) {
-                loadedFileCount++;
-                updateFileCount();
-                const msg = skippedCount > 0
-                    ? `${addedCount}件の通行止め・通行困難場所を読み込みました（${skippedCount}件のID重複をスキップ）`
-                    : `${addedCount}件の通行止め・通行困難場所を読み込みました`;
-                showMessage(msg, 'success');
-            } else if (skippedCount > 0) {
-                showMessage(`${skippedCount}件すべてがID重複のためスキップされました`, 'warning');
-            } else {
-                showMessage('通行止め・通行困難場所のデータが見つかりませんでした', 'warning');
-            }
-        } catch (error) {
-            console.error('Closure load error:', error);
-            showMessage(`読み込みエラー: ${error.message}`, 'error');
-        } finally {
-            this.value = '';
-        }
-    });
-}
-
-// closureフィーチャーをスキーマ準拠のプロパティ順に整形（出力時）
-function buildClosureExportFeature(feature) {
-    const p = feature.properties || {};
-    const props = {
-        type: 'closure',
-        id: p.id || '',
-        name: p.name || '',
-        kind: (p.kind === 'closed' || p.kind === 'difficult') ? p.kind : 'unknown'
-    };
-    if (p.reason) props.reason = p.reason;
-    // 状態は常にテスト中(draft)として出力する
-    props.status = 'draft';
-    if (p.note) props.note = p.note;
-    if (p.relatedRoute) props.relatedRoute = p.relatedRoute;
-    props.updatedAt = p.updatedAt || getDateIso();
-
-    // 座標（経度・緯度・標高）を小数点以下5桁に丸める
-    const geometry = (feature.geometry && feature.geometry.coordinates)
-        ? { ...feature.geometry, coordinates: roundCoord(feature.geometry.coordinates) }
-        : feature.geometry;
-
-    return {
-        type: 'Feature',
-        properties: props,
-        geometry: geometry
-    };
-}
-
-// 通行止め・通行困難場所のファイル出力（closureのみをGeoJSONスキーマとして出力）
-export function setupClosureFileExport() {
-    document.getElementById('exportClosureBtn').addEventListener('click', async function () {
-        if (!loadedDataInternal || !loadedDataInternal.features) {
-            showMessage('出力するデータがありません。', 'warning');
-            return;
-        }
-
-        const closureFeatures = loadedDataInternal.features.filter(f =>
-            f.properties && f.properties.type === 'closure' &&
-            f.geometry && f.geometry.type === 'Point'
-        );
-
-        if (closureFeatures.length === 0) {
-            showMessage('出力する通行止め・通行困難場所がありません。', 'warning');
-            return;
-        }
-
-        const exportData = {
-            type: 'FeatureCollection',
-            updatedAt: getDateTimeIso(),
-            features: closureFeatures.map(buildClosureExportFeature)
-        };
-
-        const dataStr = JSON.stringify(exportData, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const filename = `Closure-${getDateString()}_N${closureFeatures.length}.geojson`;
-
-        const saved = await saveBlobAsFile(blob, filename);
-        if (saved) {
-            showMessage('通行止め・通行困難場所を出力しました');
-        }
-    });
 }

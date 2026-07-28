@@ -56,7 +56,6 @@ export function initializeMap() {
     const markerMap = new Map();
     const spotMarkerMap = new Map();
     const areaLayerMap = new Map();
-    const closureMarkerMap = new Map();
 
-    return { map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap, closureMarkerMap };
+    return { map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap };
 }

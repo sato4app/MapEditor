@@ -30,10 +30,6 @@
                 <span>スポットの位置編集</span>
             </label>
             <label>
-                <input type="radio" name="mode" value="closure">
-                <span>通行禁止・困難場所の指定</span>
-            </label>
-            <label>
                 <input type="radio" name="mode" value="area">
                 <span>エリアの位置編集</span>
             </label>
@@ -158,73 +154,6 @@
                 <button class="spot-btn" id="addMoveSpotBtn">追加・移動</button>
                 <button class="spot-btn" id="deleteSpotBtn">削除</button>
                 <button class="spot-btn" id="extractDuplicateSpotsBtn">重複スポット抽出</button>
-            </div>
-        </div>
-
-        <div id="closurePanelWrapper" style="display: none;">
-            <div class="closure-panel" id="closurePanel">
-                <div class="closure-title">通行止め・通行困難場所情報</div>
-
-                <div class="closure-io-controls">
-                    <label for="closureFileInput" class="file-input-label" id="loadClosureBtn">ファイル読み込み</label>
-                    <input type="file" id="closureFileInput" accept=".geojson" style="display: none;" />
-                    <button id="exportClosureBtn">ファイル出力</button>
-                </div>
-
-                <div class="closure-count">
-                    <span class="closure-label">登録地点数</span>
-                    <input type="text" class="closure-count-input" id="closureCountDisplay" readonly>
-                </div>
-
-                <div class="closure-selector">
-                    <span class="closure-label">登録地点</span>
-                    <select class="closure-dropdown" id="closureSelect">
-                        <option value="">選択してください</option>
-                    </select>
-                </div>
-
-                <div class="closure-name">
-                    <span class="closure-label">選択地点</span>
-                    <input type="text" class="closure-name-input" id="selectedClosureName">
-                </div>
-
-                <div class="closure-name">
-                    <span class="closure-label">備考</span>
-                    <input type="text" class="closure-name-input" id="closureNote">
-                </div>
-
-                <div class="closure-radio-row">
-                    <span class="closure-label">区分</span>
-                    <label class="closure-radio-label">
-                        <input type="radio" name="closureKind" value="closed">
-                        <span>通行止め</span>
-                    </label>
-                    <label class="closure-radio-label">
-                        <input type="radio" name="closureKind" value="difficult">
-                        <span>通行困難</span>
-                    </label>
-                </div>
-
-                <div class="closure-radio-row">
-                    <span class="closure-label">登録理由</span>
-                    <label class="closure-radio-label">
-                        <input type="radio" name="closureReason" value="工事">
-                        <span>工事</span>
-                    </label>
-                    <label class="closure-radio-label">
-                        <input type="radio" name="closureReason" value="倒木">
-                        <span>倒木</span>
-                    </label>
-                    <label class="closure-radio-label">
-                        <input type="radio" name="closureReason" value="落石">
-                        <span>落石</span>
-                    </label>
-                </div>
-
-                <div class="closure-buttons">
-                    <button class="closure-btn" id="addMoveClosureBtn">追加・移動</button>
-                    <button class="closure-btn" id="deleteClosureBtn">削除</button>
-                </div>
             </div>
         </div>
 

@@ -79,18 +79,6 @@ export const DEFAULTS = {
             fillOpacity: 0.8,
             shape: 'square'
         },
-        // 通行止め・通行困難場所: 赤色(#e60000)、12x12px（枠なし）
-        // 形状は区分(kind)で変化: 通行止め=×印 / 通行困難=三角形 / 未選択=？
-        'closure': {
-            radius: 12,
-            fillColor: '#e60000',
-            color: '#e60000',
-            weight: 0,
-            stroke: false,
-            opacity: 1,
-            fillOpacity: 0.8,
-            shape: 'square'
-        },
         // エリア: シアン(#00ffff)、ポリゴン境界線、頂点は円形(radius 4)
         'area': {
             color: '#00ffff',
@@ -111,7 +99,6 @@ export const MODES = {
     GEOJSON: 'geojson',
     ROUTE: 'route',
     SPOT: 'spot',
-    CLOSURE: 'closure',
     AREA: 'area'
 };
 

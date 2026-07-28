@@ -30,7 +30,7 @@
 - **GeoReferencer**: PNG 画像を国土地理院地図に対してジオリファレンス（最小二乗法による 6 パラメータアフィン変換）し、画像内座標を GPS 座標（緯度・経度）に変換した結果を GeoJSON で出力します。地域ごとに 1 ファイルを出力する運用を想定します。
 - **MapEditor**: GeoReferencer が地域ごとに出力した複数 GeoJSON をまとめて読み込み、地図上で編集後、1 つの GeoJSON として再出力します。
 
-> **通行止め・通行困難場所（closure）について**: closure データは、本ドキュメントが扱う統合 GeoJSON とは独立した専用ファイルとして入出力されます（統合 GeoJSON には含まれません）。入出力仕様は別ドキュメント [`dataspec-geojson-closure-202606.md`](dataspec-geojson-closure-202606.md) を参照してください。
+> **通行止め・通行困難場所（closure）について**: closure データは MapEditor では扱いません（本ドキュメントが扱う統合 GeoJSON には含まれず、読み込み時も無視されます）。closure の編集と入出力は別アプリケーション **ClosureEditor** が担当し、その仕様は ClosureEditor 側のドキュメントを参照してください。
 
 ## 2. 共通仕様
 
@@ -491,18 +491,18 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 
 ## 8. 関連ドキュメント
 
-- 通行止め・通行困難場所（closure）GeoJSON 仕様: `dataspec-geojson-closure-202606.md`
 - 入力 JSON 仕様: `dataspec-json-202604.md`
 - Firebase DB 仕様: `firebase-dbspec-202512.md`
-- 機能仕様: `funcspec-202604.md`
-- 前バージョン: `dataspec-geojson-202604.md`
+- 機能仕様: `funcspec-202607.md`
+- 前バージョン: `dataspec-geojson-202606.md`
 
 ---
 
-**作成日**: 2026 年 6 月 21 日
-**バージョン**: 2.5（通行止め・通行困難場所を独立ドキュメントへ分離）
+**作成日**: 2026 年 7 月 28 日
+**バージョン**: 2.6（通行止め・通行困難場所を ClosureEditor へ移行）
 
 **変更履歴**:
+- v2.6 (2026-07-28): 通行止め・通行困難場所（closure）の編集・入出力機能が MapEditor から別アプリケーション **ClosureEditor** へ移行したことに伴い、MapEditor 側ドキュメント `dataspec-geojson-closure-202606.md` への参照を削除。
 - v2.5 (2026-06-21): 通行止め・通行困難場所（closure）の GeoJSON 入出力仕様を独立ドキュメント `dataspec-geojson-closure-202606.md` として分離。本ドキュメントが扱う統合 GeoJSON には closure を含めないことを概要に明記。
 - v2.4 (2026-04-28): MapEditor の `route` Feature に `startPoint` / `endPoint`（ID）プロパティを追加し、`startPointGPS` / `endPointGPS` を座標値（`[lng, lat]` または `[lng, lat, elevation]`）に変更（GeoReferencer 形式に統合）。ID を真の参照情報、座標を出力時スナップショットとする補完ルールを追記（読み込み時は ID 動的解決を優先、解決失敗時のみ座標フォールバック。出力時は ID から現在座標を引き直して書き出し）。
 - v2.3 (2026-04-27): GeoReferencer 出力仕様（旧 `tmp/dataspec-geojson-202604.md`）と MapEditor 入出力仕様を統合し、データフローを明示。コード構造に関する記述を除外し、ファイル仕様に絞った内容に再構成。
