@@ -1,6 +1,6 @@
 // ファイル入出力機能
 
-import { DEFAULTS, MODES, NON_CLOSURE_TYPES } from './constants.js';
+import { DEFAULTS, MODES, NON_CLOSURE_TYPES, CLOSURE_DEFAULT_KIND } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateTimeIso } from './stats.js';
 import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, state as routeEditorState } from './routeEditor.js';
@@ -829,7 +829,7 @@ function isImportableClosure(feature) {
 }
 
 // closureフィーチャーのプロパティを正規化（読み込み時）
-// idが無ければ採番、不正なkind（unknown等）は未選択扱いに、廃止したstatusは取り除く
+// idが無ければ採番、不正なkind（unknown等）は既定の区分に寄せ、廃止したstatusは取り除く
 function normalizeImportedClosure(feature, existingIds) {
     const props = feature.properties || (feature.properties = {});
     props.type = 'closure';
@@ -838,7 +838,7 @@ function normalizeImportedClosure(feature, existingIds) {
         props.id = ClosureEditor.nextClosureId(existingIds);
     }
     if (props.kind !== 'closed' && props.kind !== 'difficult') {
-        props.kind = '';
+        props.kind = CLOSURE_DEFAULT_KIND;
     }
     // statusは廃止済み。読み込んだ値は捨てる
     delete props.status;
@@ -926,7 +926,7 @@ function buildClosureExportFeature(feature) {
         type: 'closure',
         id: p.id || '',
         name: p.name || '',
-        kind: (p.kind === 'closed' || p.kind === 'difficult') ? p.kind : 'unknown'
+        kind: (p.kind === 'difficult') ? 'difficult' : CLOSURE_DEFAULT_KIND
     };
     if (p.reason) props.reason = p.reason;
     if (p.note) props.note = p.note;
@@ -967,13 +967,7 @@ export function setupClosureFileExport() {
         const filename = `Closure-${getDateString()}_C${counts.closed}_D${counts.difficult}.geojson`;
 
         const saved = await saveBlobAsFile(blob, filename);
-        if (!saved) return;
-
-        // 区分未選択は出力を止めないが、気づけるよう警告する
-        // （未選択のまま公開すると、利用者には通行止めとして表示される）
-        if (counts.unknown > 0) {
-            showMessage(`登録地点を出力しました\n区分が未選択の地点が${counts.unknown}件あります`, 'warning');
-        } else {
+        if (saved) {
             showMessage('登録地点を出力しました', 'success');
         }
     });

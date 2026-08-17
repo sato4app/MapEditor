@@ -2,7 +2,10 @@
 // 統合GeoJSON（ポイント・ルート・スポット・エリア）とは別に、本モジュール内で
 // closureのFeatureを保持し、専用ファイルとして入出力する（fileIO.js）。
 
-import { MODES, CLOSURE_STYLES, CLOSURE_ICON_BOX, CLOSURE_HIGHLIGHT_COLOR, CLOSURE_KIND_LABELS } from './constants.js';
+import {
+    MODES, CLOSURE_STYLES, CLOSURE_ICON_BOX, CLOSURE_HIGHLIGHT_COLOR, CLOSURE_KIND_LABELS,
+    CLOSURE_DEFAULT_KIND, CLOSURE_DEFAULT_REASON
+} from './constants.js';
 import { showMessage } from './message.js';
 import { getDateIso } from './stats.js';
 import { fetchElevation } from './elevation.js';
@@ -35,14 +38,14 @@ export function getClosureFeatures() {
 }
 
 // 区分別の件数（件数表示・出力ファイル名で使用）
+// 区分は通行止め・通行困難のいずれかに正規化済みのため、通行困難以外は通行止めとして数える
 export function getClosureCounts() {
-    const counts = { closed: 0, difficult: 0, unknown: 0, total: state.features.length };
+    const counts = { closed: 0, difficult: 0, total: state.features.length };
 
     state.features.forEach(feature => {
         const kind = feature.properties && feature.properties.kind;
-        if (kind === 'closed') counts.closed++;
-        else if (kind === 'difficult') counts.difficult++;
-        else counts.unknown++;
+        if (kind === 'difficult') counts.difficult++;
+        else counts.closed++;
     });
 
     return counts;
@@ -98,9 +101,9 @@ function escapeHtml(value) {
 }
 
 // 区分（kind）に応じたマーカー形状のHTMLを生成
-// closed: ✖印 / difficult: 三角形 / 未選択: ？（疑問符）
+// closed: ✖印 / difficult: 三角形
 function closureShapeHtml(kind, colorOverride) {
-    const style = CLOSURE_STYLES[kind] || CLOSURE_STYLES.unknown;
+    const style = CLOSURE_STYLES[kind] || CLOSURE_STYLES[CLOSURE_DEFAULT_KIND];
     const color = colorOverride || style.color;
     const box = CLOSURE_ICON_BOX;
     const size = style.size;
@@ -110,15 +113,12 @@ function closureShapeHtml(kind, colorOverride) {
     const hitArea = `<rect x="0" y="0" width="${box}" height="${box}" fill="transparent" pointer-events="all" />`;
 
     let shape;
-    if (style.shape === 'x') {
+    if (style.shape === 'triangle') {
+        shape = `<polygon points="${box / 2},${offset} ${offset + size},${offset + size} ${offset},${offset + size}" fill="${color}" />`;
+    } else {
         const weight = Math.max(2, Math.round(size / 3));
         shape = `<line x1="${offset}" y1="${offset}" x2="${offset + size}" y2="${offset + size}" stroke="${color}" stroke-width="${weight}" stroke-linecap="round" />`
             + `<line x1="${offset + size}" y1="${offset}" x2="${offset}" y2="${offset + size}" stroke="${color}" stroke-width="${weight}" stroke-linecap="round" />`;
-    } else if (style.shape === 'triangle') {
-        shape = `<polygon points="${box / 2},${offset} ${offset + size},${offset + size} ${offset},${offset + size}" fill="${color}" />`;
-    } else {
-        shape = `<text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" `
-            + `font-family="sans-serif" font-size="${size}" font-weight="bold" fill="${color}">?</text>`;
     }
 
     return `<svg width="${box}" height="${box}" viewBox="0 0 ${box} ${box}" style="display: block;">`
@@ -162,8 +162,8 @@ function formatClosurePopup(feature) {
     const props = feature.properties || {};
     const lines = [`<strong>${escapeHtml(props.name || props.id || '')}</strong>`];
 
-    const kindLabel = CLOSURE_KIND_LABELS[props.kind];
-    if (kindLabel && props.kind !== 'unknown') lines.push(escapeHtml(kindLabel));
+    const kindLabel = CLOSURE_KIND_LABELS[props.kind] || CLOSURE_KIND_LABELS[CLOSURE_DEFAULT_KIND];
+    lines.push(escapeHtml(kindLabel));
     if (props.reason) lines.push(`理由: ${escapeHtml(props.reason)}`);
     if (props.note) lines.push(escapeHtml(props.note));
     if (props.updatedAt) lines.push(`更新日: ${escapeHtml(props.updatedAt)}`);
@@ -238,8 +238,7 @@ export function updateClosureDropdown() {
 
     const breakdown = document.getElementById('closureBreakdown');
     if (breakdown) {
-        breakdown.textContent = `通行止め ${counts.closed} / 通行困難 ${counts.difficult}`
-            + (counts.unknown > 0 ? ` / 未選択 ${counts.unknown}` : '');
+        breakdown.textContent = `通行止め ${counts.closed} / 通行困難 ${counts.difficult}`;
     }
 
     const closureSelect = document.getElementById('closureSelect');
@@ -260,14 +259,14 @@ export function updateClosureDropdown() {
     }
 }
 
-// 区分（kind）ラジオボタンの設定。nullを渡すとすべて未選択になる
+// 区分（kind）ラジオボタンの設定。nullを渡すとすべて未選択になる（地点を選択していない状態）
 function setKindRadios(value) {
     document.querySelectorAll('input[name="closureKind"]').forEach(radio => {
         radio.checked = (radio.value === value);
     });
 }
 
-// 登録理由（reason）ラジオボタンの設定。空文字は「なし」、nullはすべて未選択
+// 登録理由（reason）ラジオボタンの設定。空文字は「その他」、nullはすべて未選択
 function setReasonRadios(value) {
     document.querySelectorAll('input[name="closureReason"]').forEach(radio => {
         radio.checked = (radio.value === value);
@@ -313,10 +312,11 @@ export function highlightClosure(closureIndex) {
         applyClosureColor(previousMarker, null);
     }
 
+    // 区分は通行止め・通行困難のいずれか、登録理由は空文字なら「その他」が選択される
     const props = closure.feature.properties || {};
     document.getElementById('selectedClosureName').value = closure.name;
     document.getElementById('closureNote').value = props.note || '';
-    setKindRadios(props.kind === 'closed' || props.kind === 'difficult' ? props.kind : null);
+    setKindRadios(props.kind === 'difficult' ? 'difficult' : CLOSURE_DEFAULT_KIND);
     setReasonRadios(props.reason || '');
 
     // ハイライト（アクア色）
@@ -377,8 +377,8 @@ async function addClosureAt(latlng) {
             type: 'closure',
             id: nextClosureId(getExistingClosureIds()),
             name: newName,
-            kind: 'closed',
-            reason: '',
+            kind: CLOSURE_DEFAULT_KIND,
+            reason: CLOSURE_DEFAULT_REASON,
             updatedAt: getDateIso()
         },
         geometry: {

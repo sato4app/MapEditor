@@ -106,12 +106,16 @@ export const MODES = {
 // ===== 通行止め・通行困難地点（closure）の表示 =====
 
 // 区分（kind）ごとのマーカースタイル。公開後にユーザーが見る地図（minoh-hiking）の
-// 既定値に合わせ、見え方を揃える。unknown（区分未選択）は編集専用の状態。
+// 既定値に合わせ、見え方を揃える。
 export const CLOSURE_STYLES = {
     closed: { color: '#DC2626', shape: 'x', size: 10 },
-    difficult: { color: '#F59E0B', shape: 'triangle', size: 16 },
-    unknown: { color: '#6B7280', shape: 'question', size: 16 }
+    difficult: { color: '#F59E0B', shape: 'triangle', size: 16 }
 };
+
+// 新規登録時の既定値。区分・登録理由は未選択にできないため、
+// 読み込んだデータの区分が不正な場合もこの値へ寄せる。
+export const CLOSURE_DEFAULT_KIND = 'closed';
+export const CLOSURE_DEFAULT_REASON = '工事';
 
 // マーカーアイコンの当たり領域（px）。✖印のように描画部分が細い形状でも
 // 掴んでドラッグできるよう、実際の描画サイズより大きい正方形を確保する。
@@ -123,8 +127,7 @@ export const CLOSURE_HIGHLIGHT_COLOR = '#00ffff';
 // 区分（kind）の表示ラベル
 export const CLOSURE_KIND_LABELS = {
     closed: '通行止め',
-    difficult: '通行困難',
-    unknown: '未選択'
+    difficult: '通行困難'
 };
 
 // 統合GeoJSONで使われるclosure以外のtype。
