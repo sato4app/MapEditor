@@ -98,3 +98,26 @@ export function getDateString() {
     const day = String(now.getDate()).padStart(2, '0');
     return `${year}${month}${day}`;
 }
+
+// 日付文字列生成関数（ISO 8601 / YYYY-MM-DD形式。登録地点のupdatedAtで使用）
+export function getDateIso() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// 日時文字列生成関数（ISO 8601 / タイムゾーンオフセット付き。出力ファイルのupdatedAtで使用）
+export function getDateTimeIso() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const offsetMinutes = -now.getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? '+' : '-';
+    const absMinutes = Math.abs(offsetMinutes);
+    const offsetHH = pad(Math.floor(absMinutes / 60));
+    const offsetMM = pad(absMinutes % 60);
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}` +
+        `T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}` +
+        `${sign}${offsetHH}:${offsetMM}`;
+}

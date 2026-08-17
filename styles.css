@@ -598,6 +598,174 @@ button:hover {
     flex: none;
 }
 
+/* 通行止め・通行困難地点の登録パネル */
+.closure-panel {
+    border: 2px solid #999;
+    border-radius: 8px;
+    padding: 20px;
+    background: white;
+}
+
+.closure-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+/* パネル上部のファイル入出力ボタン（横並び・内容幅） */
+.closure-io-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.closure-io-controls .file-input-label,
+.closure-io-controls #exportClosureBtn {
+    flex: 1;
+    width: auto;
+    margin: 0;
+    box-sizing: border-box;
+    padding: 8px 8px;
+    text-align: center;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.closure-count {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 15px;
+    /* 区分未選択の件数が加わって収まらない場合は内訳を折り返す */
+    flex-wrap: wrap;
+}
+
+.closure-label {
+    font-size: 12px;
+    white-space: nowrap;
+    min-width: 5em;
+}
+
+.closure-count-input {
+    width: 32px;
+    padding: 6px 4px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    text-align: center;
+    background-color: #f8f9fa;
+}
+
+.closure-breakdown {
+    font-size: 10px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.closure-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.closure-dropdown {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L6 6L11 1" stroke="%23333" stroke-width="2" stroke-linecap="round"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+}
+
+.closure-dropdown:focus {
+    outline: none;
+    border-color: #0066cc;
+}
+
+.closure-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.closure-name-input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.closure-radio-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.closure-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.closure-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.closure-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+    font-weight: 500;
+    flex: none;
+}
+
+.closure-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.closure-btn:active {
+    transform: translateY(1px);
+}
+
+.closure-btn.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.closure-btn.active:hover {
+    background-color: #0056b3;
+}
+
+/* 登録地点マーカー（SVGで✖印・三角形・？を描画するため背景は透明） */
+.closure-marker {
+    background: transparent;
+    border: none;
+}
+
 /* Leafletポップアップのスタイル */
 .leaflet-popup-content-wrapper {
     padding: 4px;
