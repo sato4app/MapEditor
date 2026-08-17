@@ -2,7 +2,7 @@
 
 ## 1. 概要
 
-本ドキュメントは、**GeoReferencer** からエクスポートされ **MapEditor** に取り込まれる GeoJSON ファイル、および MapEditor が出力する統合 GeoJSON ファイルのフォーマットを定義します。
+本ドキュメントは、**GeoReferencer** からエクスポートされ **MapEditor** に取り込まれる GeoJSON ファイル、MapEditor が出力する統合 GeoJSON ファイル、および MapEditor が入出力する**通行禁止・通行困難地点ファイル**のフォーマットを定義します。
 
 ### 1.1 データフロー
 
@@ -25,12 +25,20 @@
                                               │
                                               ▼
                                        [統合.geojson]
+
+                                          MapEditor（登録地点パネル）
+       [Closure-….geojson] ────────────→ ・通行禁止・通行困難地点の登録・編集
+                （前回の出力／任意）     ・標高の自動付与
+                                          ・専用ファイルとして出力
+                                              │
+                                              ▼
+                                    [Closure-yyyymmdd_Cx_Dy.geojson]
 ```
 
 - **GeoReferencer**: PNG 画像を国土地理院地図に対してジオリファレンス（最小二乗法による 6 パラメータアフィン変換）し、画像内座標を GPS 座標（緯度・経度）に変換した結果を GeoJSON で出力します。地域ごとに 1 ファイルを出力する運用を想定します。
 - **MapEditor**: GeoReferencer が地域ごとに出力した複数 GeoJSON をまとめて読み込み、地図上で編集後、1 つの GeoJSON として再出力します。
 
-> **通行止め・通行困難場所（closure）について**: closure データは MapEditor では扱いません（本ドキュメントが扱う統合 GeoJSON には含まれず、読み込み時も無視されます）。closure の編集と入出力は別アプリケーション **ClosureEditor** が担当し、その仕様は ClosureEditor 側のドキュメントを参照してください。
+> **通行禁止・通行困難地点（closure）について**: closure データは統合 GeoJSON には**含まれません**（読み込み時も無視されます）。MapEditor の登録地点パネルで編集し、専用ファイルとして個別に入出力します（[5 章](#5-通行禁止通行困難地点ファイル仕様mapeditor-専用入出力)）。
 
 ## 2. 共通仕様
 
@@ -47,7 +55,7 @@
 ### 2.1 数値精度
 
 - GeoReferencer 出力: 経度・緯度を **小数点以下5桁** に丸めて出力（標高は小数点以下1桁）。
-- MapEditor 出力: 経度・緯度・標高をいずれも **小数点以下5桁** に丸めて出力（内部に保持した座標値は読み込んだ精度を維持し、丸めは出力時のみ適用）。
+- MapEditor 出力: 経度・緯度・標高をいずれも **小数点以下5桁** に丸めて出力（内部に保持した座標値は読み込んだ精度を維持し、丸めは出力時のみ適用）。統合 GeoJSON・通行禁止・通行困難地点ファイルとも同じ扱いです。
 
 ### 2.2 FeatureCollection の基本構造
 
@@ -57,6 +65,8 @@
   "features": [ /* Feature の配列 */ ]
 }
 ```
+
+通行禁止・通行困難地点ファイルは、これに加えてトップレベルの `updatedAt`（および任意の `version`）を持ちます（[5.2 節](#52-featurecollection-の構造)）。
 
 ---
 
@@ -245,7 +255,7 @@ MapEditor が「GeoJSON 出力」操作で生成する統合ファイルの仕�
 MapGPS-{YYYYMMDD}_P{ポイント数}_R{ルート数}_S{スポット数}.geojson
 ```
 
-**例**: `MapGPS-20260427_P15_R5_S8.geojson`
+**例**: `MapGPS-20260817_P15_R5_S8.geojson`
 
 ### 4.2 Feature 種別
 
@@ -257,7 +267,8 @@ MapGPS-{YYYYMMDD}_P{ポイント数}_R{ルート数}_S{スポット数}.geojson
 | `spot` | Point | スポット編集結果 |
 | `area` | Polygon | エリア編集結果 |
 
-> **注**: 内部編集用の `type: "route_waypoint"` Point Feature は出力時に `route` LineString に集約され、ファイルには出力されません（[4.2.6 参照](#426-内部表現route_waypointファイル出力なし)）。
+> **注 1**: 内部編集用の `type: "route_waypoint"` Point Feature は出力時に `route` LineString に集約され、ファイルには出力されません（[4.2.6 参照](#426-内部表現route_waypointファイル出力なし)）。
+> **注 2**: 通行禁止・通行困難地点（`type: "closure"`）は統合 GeoJSON には出力されません。専用ファイルとして個別に出力します（[5 章](#5-通行禁止通行困難地点ファイル仕様mapeditor-専用入出力)）。
 
 #### 4.2.1 ポイント（`type: "point"`）
 
@@ -443,7 +454,118 @@ MapEditor 内部での編集中、各ルートの全座標を Point Feature と�
 
 ---
 
-## 5. MapEditor の読み込み処理仕様（ファイル単位の振る舞い）
+## 5. 通行禁止・通行困難地点ファイル仕様（MapEditor 専用入出力）
+
+MapEditor の「登録地点」パネルが読み書きする専用ファイルの仕様です。統合 GeoJSON とは**独立したファイル**として扱います。
+
+### 5.1 ファイル名
+
+```
+Closure-{YYYYMMDD}_C{通行止め件数}_D{通行困難件数}.geojson
+```
+
+**例**: `Closure-20260817_C3_D2.geojson`
+
+- `C`: 区分が `closed`（通行止め）の件数
+- `D`: 区分が `difficult`（通行困難）の件数
+- 区分未選択（`unknown`）の地点は件数に含めません（出力時に警告表示）
+
+### 5.2 FeatureCollection の構造
+
+```json
+{
+  "type": "FeatureCollection",
+  "version": "2026-08-17.1",
+  "updatedAt": "2026-08-17T10:30:00+09:00",
+  "features": [ /* closure Feature の配列 */ ]
+}
+```
+
+| プロパティ | 値・型 | 必須 | 説明 |
+|-----------|--------|:----:|------|
+| `type` | `"FeatureCollection"` | ○ | 固定 |
+| `version` | String | | 公開用のデータバージョン。MapEditor には編集欄がなく、**読み込んだファイルに値があった場合のみ引き継いで出力**します |
+| `updatedAt` | String (ISO 8601) | ○ | ファイル出力日時。タイムゾーンオフセット付き |
+| `features` | Array | ○ | closure Feature の配列 |
+
+### 5.3 Feature 仕様
+
+#### 5.3.1 プロパティ
+
+| プロパティ | 値・型 | 必須 | 説明 |
+|-----------|--------|:----:|------|
+| `type` | `"closure"` | ○ | 固定値。通行禁止・通行困難地点専用ファイルであることの目印 |
+| `id` | String | ○ | 地点 ID。`C-{連番2桁}` 形式（例 `C-01`）。**全地点で一意**。MapEditor が自動採番 |
+| `name` | String | ○ | 地点名称。新規作成時の初期値は `地点{連番}` |
+| `kind` | `"closed"` / `"difficult"` / `"unknown"` | ○ | 区分。未選択の場合は `"unknown"` として出力 |
+| `reason` | String | | 登録理由。値があるときのみ出力。標準値は `工事` / `倒木` / `落石`（画面上の「その他」は値なしとして扱う） |
+| `note` | String | | 備考。値があるときのみ出力 |
+| `relatedRoute` | String | | 関連ルート ID。値があるときのみ出力（入力に含まれていれば保持して再出力。UI からの設定手段はなし） |
+| `updatedAt` | String (YYYY-MM-DD) | ○ | 地点の最終更新日（追加・移動・属性編集・標高付与で更新） |
+
+**プロパティの出力順**: `type` → `id` → `name` → `kind` →（`reason`）→（`note`）→（`relatedRoute`）→ `updatedAt`
+
+#### 5.3.2 `kind`（区分）の値
+
+| 値 | 意味 | MapEditor での表示 |
+|----|------|-------------------|
+| `closed` | 通行止め | ✖印（赤 `#DC2626`） |
+| `difficult` | 通行困難 | 三角形（橙 `#F59E0B`） |
+| `unknown` | 未選択 | `?`（灰 `#6B7280`） |
+
+#### 5.3.3 Geometry
+
+- `type`: `"Point"`
+- `coordinates`: `[経度, 緯度]` または `[経度, 緯度, 標高]`
+- 標高は国土地理院標高 API から取得できた場合のみ 3 番目の要素として含みます。
+
+#### 5.3.4 出力例
+
+```json
+{
+  "type": "Feature",
+  "properties": {
+    "type": "closure",
+    "id": "C-01",
+    "name": "崩落地点",
+    "kind": "closed",
+    "reason": "落石",
+    "note": "迂回路あり",
+    "updatedAt": "2026-08-17"
+  },
+  "geometry": {
+    "type": "Point",
+    "coordinates": [135.47204, 34.85367, 150.5]
+  }
+}
+```
+
+### 5.4 読み込み時の判定と正規化
+
+複数ファイルを同時に選択でき、すべての Feature を合算して取り込みます。
+
+**取り込み対象の判定**（すべて満たすもの）:
+
+1. Geometry が `Point` であり、`coordinates` が配列であること
+2. `properties.type` が未設定、または `"closure"` であること
+3. `properties.type` が統合 GeoJSON 由来の既知種別（`ポイントGPS`、`point`、`route`、`route_waypoint`、`spot`、`スポット`、`area`）**でない**こと
+
+> `properties.type` が無い Feature も取り込む仕様です（公開ストア由来の GeoJSON には `type` が含まれないため）。統合 GeoJSON を誤って選択した場合は、条件 3 により既知種別が除外されます。
+
+**正規化処理**:
+
+| 対象 | 処理 |
+|------|------|
+| `type` | `"closure"` を設定 |
+| `id` | 未設定なら `C-{連番2桁}` 形式で自動採番（既存の最大番号 +1） |
+| `kind` | `closed` / `difficult` 以外の値（`unknown` 等）は未選択（空値）に正規化 |
+| `status` | 廃止済みプロパティのため読み込み時に除去 |
+| ID 重複 | 既存地点と同一 `id` の地点はスキップ（件数を通知） |
+| `version`（トップレベル） | 値があれば保持し、出力時に引き継ぐ |
+
+---
+
+## 6. MapEditor の読み込み処理仕様（ファイル単位の振る舞い）
 
 GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を行います。
 
@@ -452,8 +574,9 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 3. **同一 ID 重複の除外**: `type: "point"` および `type: "ポイントGPS"` について、既存データと同一 `id` を持つ Feature は新規追加分をスキップします。バッチ内の重複も除外されます。
 4. **`type: "route"` LineString の自動展開**: `id` が `route_{X}_to_{Y}` パターンに一致するルートは、内部編集用に `route_waypoint` Point Feature へ自動展開されます。各座標が順番に `waypoint_number` 1, 2, 3, … として登録されます。
 5. **編集対象としての登録**: `route_waypoint` Point は `route_id` ごとにグループ化し `waypoint_number` 順に並べて編集対象として登録します。
+6. **closure の除外**: `type: "closure"` の Point Feature は取り込みません（登録地点パネルの専用読み込みで扱います）。
 
-### 5.1 Excel(.xlsx) 読み込み
+### 6.1 Excel(.xlsx) 読み込み
 
 `.xlsx` ファイルを選択した場合は、各行を `type: "ポイントGPS"` の Feature に変換して取り込みます。同一 `id` の既存ポイントGPS が存在する場合は Excel の内容で上書きされます。
 
@@ -468,9 +591,9 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 
 ---
 
-## 6. MapEditor の出力処理仕様（ファイル単位の振る舞い）
+## 7. MapEditor の出力処理仕様（ファイル単位の振る舞い）
 
-エクスポート時、MapEditor は内部状態に対して次の変換を行います。
+統合 GeoJSON のエクスポート時、MapEditor は内部状態に対して次の変換を行います。
 
 1. **`type: "route_waypoint"` Point** をすべて除外する。
 2. **`type: "route"` LineString** をすべて除外する（再生成のため）。
@@ -481,27 +604,32 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
    - `startPointGPS` / `endPointGPS`（座標）を、`startPoint` / `endPoint` の ID から [4.2.3 ID 解決順序](#423-ルートtype-route) に従って引き直した現在座標で付与（解決失敗時は `null` または省略）
 5. その他の Feature（`point`、`ポイントGPS`、`spot`、`area`）はそのまま保持する。
 
+通行禁止・通行困難地点は統合 GeoJSON とは別に保持しているため、上記の処理対象外です。登録地点パネルの「ファイル出力」で、[5 章](#5-通行禁止通行困難地点ファイル仕様mapeditor-専用入出力) の仕様に従って個別に出力します。
+
 ---
 
-## 7. 補足
+## 8. 補足
 
 - **`source` / `description` フィールド**: 入力 GeoJSON に含まれていれば保持して再出力されますが、MapEditor が新規生成するルート（`route`）、スポット（`spot`）、エリア（`area`）の Feature には付与されません。
 - **`name` フィールド**: ルート（`route`）Feature にはエクスポート時に付与されません（`startPoint` / `endPoint` で識別）。
 - **ポイントGPS** は MapEditor 独自の中間種別であり、GeoReferencer 標準仕様には含まれません。Excel 読み込み機能の入力データとして使用されます。
+- **通行禁止・通行困難地点** は統合 GeoJSON に混在させないでください。混在したファイルを統合 GeoJSON として読み込んだ場合、closure Feature は取り込まれずに失われます（元ファイルは変更されません）。
 
-## 8. 関連ドキュメント
+## 9. 関連ドキュメント
 
 - 入力 JSON 仕様: `dataspec-json-202604.md`
 - Firebase DB 仕様: `firebase-dbspec-202512.md`
-- 機能仕様: `funcspec-202607.md`
-- 前バージョン: `dataspec-geojson-202606.md`
+- 機能仕様: [funcspec-202608.md](funcspec-202608.md)
+- 利用者の手引: [UsersGuide-202608.md](UsersGuide-202608.md)
+- 前バージョン: `dataspec-geojson-202607.md`
 
 ---
 
-**作成日**: 2026 年 7 月 28 日
-**バージョン**: 2.6（通行止め・通行困難場所を ClosureEditor へ移行）
+**作成日**: 2026 年 8 月 17 日
+**バージョン**: 2.7（通行禁止・通行困難地点ファイル仕様を追加）
 
 **変更履歴**:
+- v2.7 (2026-08-17): 通行禁止・通行困難地点（closure）の登録機能が MapEditor に追加されたことに伴い、専用ファイルの仕様（ファイル名・FeatureCollection 構造・Feature プロパティ・読み込み時の判定と正規化）を [5 章](#5-通行禁止通行困難地点ファイル仕様mapeditor-専用入出力) として追加し、以降の章番号を繰り下げ。データフロー図・読み込み／出力処理仕様に closure の扱いを追記。
 - v2.6 (2026-07-28): 通行止め・通行困難場所（closure）の編集・入出力機能が MapEditor から別アプリケーション **ClosureEditor** へ移行したことに伴い、MapEditor 側ドキュメント `dataspec-geojson-closure-202606.md` への参照を削除。
 - v2.5 (2026-06-21): 通行止め・通行困難場所（closure）の GeoJSON 入出力仕様を独立ドキュメント `dataspec-geojson-closure-202606.md` として分離。本ドキュメントが扱う統合 GeoJSON には closure を含めないことを概要に明記。
 - v2.4 (2026-04-28): MapEditor の `route` Feature に `startPoint` / `endPoint`（ID）プロパティを追加し、`startPointGPS` / `endPointGPS` を座標値（`[lng, lat]` または `[lng, lat, elevation]`）に変更（GeoReferencer 形式に統合）。ID を真の参照情報、座標を出力時スナップショットとする補完ルールを追記（読み込み時は ID 動的解決を優先、解決失敗時のみ座標フォールバック。出力時は ID から現在座標を引き直して書き出し）。
