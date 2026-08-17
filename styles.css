@@ -710,10 +710,30 @@ button:hover {
 
 .closure-radio-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     margin-bottom: 15px;
+}
+
+/* ラジオボタンは複数行になっても左端が揃うよう、ラベルの右側にまとめて配置する */
+.closure-radio-group {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.closure-radio-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     flex-wrap: wrap;
+}
+
+.closure-radio-row .closure-label {
+    /* ラジオボタンの1行目と縦位置を揃える */
+    padding-top: 2px;
 }
 
 .closure-radio-label {

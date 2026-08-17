@@ -31,7 +31,7 @@
             </label>
             <label>
                 <input type="radio" name="mode" value="closure">
-                <span>通行止め・困難地点の登録</span>
+                <span>通行禁止・通行困難地点の登録</span>
             </label>
             <label>
                 <input type="radio" name="mode" value="area">
@@ -195,34 +195,44 @@
 
             <div class="closure-radio-row">
                 <span class="closure-label">区分</span>
-                <label class="closure-radio-label">
-                    <input type="radio" name="closureKind" value="closed">
-                    <span>通行止め</span>
-                </label>
-                <label class="closure-radio-label">
-                    <input type="radio" name="closureKind" value="difficult">
-                    <span>通行困難</span>
-                </label>
+                <div class="closure-radio-group">
+                    <div class="closure-radio-line">
+                        <label class="closure-radio-label">
+                            <input type="radio" name="closureKind" value="closed">
+                            <span>通行止め</span>
+                        </label>
+                        <label class="closure-radio-label">
+                            <input type="radio" name="closureKind" value="difficult">
+                            <span>通行困難</span>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <div class="closure-radio-row">
                 <span class="closure-label">登録理由</span>
-                <label class="closure-radio-label">
-                    <input type="radio" name="closureReason" value="工事">
-                    <span>工事</span>
-                </label>
-                <label class="closure-radio-label">
-                    <input type="radio" name="closureReason" value="倒木">
-                    <span>倒木</span>
-                </label>
-                <label class="closure-radio-label">
-                    <input type="radio" name="closureReason" value="落石">
-                    <span>落石</span>
-                </label>
-                <label class="closure-radio-label">
-                    <input type="radio" name="closureReason" value="">
-                    <span>なし</span>
-                </label>
+                <div class="closure-radio-group">
+                    <div class="closure-radio-line">
+                        <label class="closure-radio-label">
+                            <input type="radio" name="closureReason" value="工事">
+                            <span>工事</span>
+                        </label>
+                        <label class="closure-radio-label">
+                            <input type="radio" name="closureReason" value="倒木">
+                            <span>倒木</span>
+                        </label>
+                        <label class="closure-radio-label">
+                            <input type="radio" name="closureReason" value="落石">
+                            <span>落石</span>
+                        </label>
+                    </div>
+                    <div class="closure-radio-line">
+                        <label class="closure-radio-label">
+                            <input type="radio" name="closureReason" value="その他">
+                            <span>その他</span>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <div class="closure-buttons">
