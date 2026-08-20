@@ -40,6 +40,39 @@
 
 > **通行禁止・通行困難地点（closure）について**: closure データは統合 GeoJSON には**含まれません**（読み込み時も無視されます）。MapEditor の登録地点パネルで編集し、専用ファイルとして個別に入出力します（[5 章](#5-通行禁止通行困難地点ファイル仕様mapeditor-専用入出力)）。
 
+### 1.2 公開との関係（MapPublisher）
+
+MapEditor が出力するファイルは**作業用**であり、そのまま利用者へ配信されるわけではありません。
+公開は **MapPublisher** が行い、送信前に**公開スキーマへ整形**します。
+
+```
+[統合.geojson]       ──┐
+                       │  MapPublisher
+[Closure-….geojson]  ──┤  ・公開スキーマへ整形（編集用の情報を落とす）
+                       │  ・公開API へ送信（全置換）
+                       └──────────┬──────────
+                                  ▼
+                       minoh-hiking（利用者アプリ）
+```
+
+整形時に落とされる主なものは次のとおりです。
+
+| type | 落とされるプロパティ | 理由 |
+|------|--------------------|------|
+| `spot` | `id` / `source` / `description` | 表示に使わない。ルートはスポットを `name` で参照するため `id` は参照されない |
+| `ポイントGPS` | `pointId` | `id` と同値のため |
+| `route` | `startPoint` / `endPoint` | 端点は `startPointGPS` / `endPointGPS` の座標で渡すため、ID 参照は不要 |
+
+また `point` / `route_waypoint` / `area` は**公開されません**（利用者アプリで描画しないため）。
+
+**MapEditor 側は出力形式を変更しません。** 編集に必要な識別子は作業ファイルに残したままとし、
+配信データとの差は MapPublisher が吸収します。編集の都合と配信の都合を分離することで、
+どちらか一方の事情がもう一方に波及しないようにしています。
+
+> 公開スキーマの正本は minoh-hiking の `docs/publish-api-202608.md` §3（契約バージョン 2.0）です。
+> 二重管理を避けるため、本書には書き写しません。
+
+
 ## 2. 共通仕様
 
 | 項目 | 値 |
@@ -622,14 +655,17 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 - Firebase DB 仕様: `firebase-dbspec-202512.md`
 - 機能仕様: [funcspec-202608.md](funcspec-202608.md)
 - 利用者の手引: [UsersGuide-202608.md](UsersGuide-202608.md)
+- 公開API・公開スキーマ（正本）: minoh-hiking `docs/publish-api-202608.md`
+- 公開ツール: MapPublisher `docs/funcspec-202608.md` / `docs/dataspec-202608.md`
 - 前バージョン: `dataspec-geojson-202607.md`
 
 ---
 
 **作成日**: 2026 年 8 月 17 日
-**バージョン**: 2.8（通行禁止・通行困難地点の区分から `unknown` を廃止）
+**バージョン**: 2.9（公開との関係を追記）
 
 **変更履歴**:
+- v2.9 (2026-08-20): 公開との関係（[1.2 節](#12-公開との関係mappublisher)）を追加。MapEditor の出力は作業用ファイルであり、公開時に MapPublisher が公開スキーマへ整形すること、その際に落とされるプロパティと公開されない type を明記。**MapEditor 側の出力形式は変更なし**。
 - v2.8 (2026-08-17): 通行禁止・通行困難地点の `kind` から `"unknown"`（未選択）を廃止し、`"closed"` / `"difficult"` の 2 値に変更。新規登録時の既定値（`kind`: `"closed"`、`reason`: `"工事"`）と、読み込み時に不正な `kind` を `"closed"` へ正規化する仕様を追記。
 - v2.7 (2026-08-17): 通行禁止・通行困難地点（closure）の登録機能が MapEditor に追加されたことに伴い、専用ファイルの仕様（ファイル名・FeatureCollection 構造・Feature プロパティ・読み込み時の判定と正規化）を [5 章](#5-通行禁止通行困難地点ファイル仕様mapeditor-専用入出力) として追加し、以降の章番号を繰り下げ。データフロー図・読み込み／出力処理仕様に closure の扱いを追記。
 - v2.6 (2026-07-28): 通行止め・通行困難場所（closure）の編集・入出力機能が MapEditor から別アプリケーション **ClosureEditor** へ移行したことに伴い、MapEditor 側ドキュメント `dataspec-geojson-closure-202606.md` への参照を削除。
