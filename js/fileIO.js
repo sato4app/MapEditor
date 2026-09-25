@@ -919,7 +919,7 @@ export function setupClosureFileLoad() {
 }
 
 // closureフィーチャーをスキーマ準拠のプロパティ順に整形（出力時）
-// 出力順: type → id → name → kind →（reason）→（note）→（relatedRoute）→ updatedAt
+// 出力順: type → id → name → kind →（reason）→（note）→（relatedRoute）→（reopenDate）→ updatedAt
 function buildClosureExportFeature(feature) {
     const p = feature.properties || {};
     const props = {
@@ -931,6 +931,7 @@ function buildClosureExportFeature(feature) {
     if (p.reason) props.reason = p.reason;
     if (p.note) props.note = p.note;
     if (p.relatedRoute) props.relatedRoute = p.relatedRoute;
+    if (p.reopenDate) props.reopenDate = p.reopenDate;
     props.updatedAt = p.updatedAt || '';
 
     // 座標（経度・緯度・標高）を小数点以下5桁に丸める

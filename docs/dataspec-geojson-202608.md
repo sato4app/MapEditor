@@ -534,9 +534,10 @@ Closure-{YYYYMMDD}_C{通行止め件数}_D{通行困難件数}.geojson
 | `reason` | String | | 登録理由。値があるときのみ出力。標準値は `工事` / `倒木` / `落石`（新規登録時の既定値は `工事`。画面上の「その他」は値なしとして扱う） |
 | `note` | String | | 備考。値があるときのみ出力 |
 | `relatedRoute` | String | | 関連ルート ID。値があるときのみ出力（入力に含まれていれば保持して再出力。UI からの設定手段はなし） |
+| `reopenDate` | String (YYYY-MM-DD) | | 解除予定日。値があるときのみ出力（未定なら出力しない）。日付で書けない見込みは `note` に書く。公開API 契約 3.1 で公開対象 |
 | `updatedAt` | String (YYYY-MM-DD) | ○ | 地点の最終更新日（追加・移動・属性編集・標高付与で更新） |
 
-**プロパティの出力順**: `type` → `id` → `name` → `kind` →（`reason`）→（`note`）→（`relatedRoute`）→ `updatedAt`
+**プロパティの出力順**: `type` → `id` → `name` → `kind` →（`reason`）→（`note`）→（`relatedRoute`）→（`reopenDate`）→ `updatedAt`
 
 #### 5.3.2 `kind`（区分）の値
 
@@ -662,9 +663,10 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 ---
 
 **作成日**: 2026 年 8 月 17 日
-**バージョン**: 2.9（公開との関係を追記）
+**バージョン**: 2.10（解除予定日を追加）
 
 **変更履歴**:
+- v2.10 (2026-09-25): 通行禁止・通行困難地点の Feature に `reopenDate`（解除予定日・`YYYY-MM-DD`・任意）を追加し、出力順を `relatedRoute` の後・`updatedAt` の前とした。MapPublisher がそのまま公開する（公開API 契約 3.1）。
 - v2.9 (2026-08-20): 公開との関係（[1.2 節](#12-公開との関係mappublisher)）を追加。MapEditor の出力は作業用ファイルであり、公開時に MapPublisher が公開スキーマへ整形すること、その際に落とされるプロパティと公開されない type を明記。**MapEditor 側の出力形式は変更なし**。
 - v2.8 (2026-08-17): 通行禁止・通行困難地点の `kind` から `"unknown"`（未選択）を廃止し、`"closed"` / `"difficult"` の 2 値に変更。新規登録時の既定値（`kind`: `"closed"`、`reason`: `"工事"`）と、読み込み時に不正な `kind` を `"closed"` へ正規化する仕様を追記。
 - v2.7 (2026-08-17): 通行禁止・通行困難地点（closure）の登録機能が MapEditor に追加されたことに伴い、専用ファイルの仕様（ファイル名・FeatureCollection 構造・Feature プロパティ・読み込み時の判定と正規化）を [5 章](#5-通行禁止通行困難地点ファイル仕様mapeditor-専用入出力) として追加し、以降の章番号を繰り下げ。データフロー図・読み込み／出力処理仕様に closure の扱いを追記。

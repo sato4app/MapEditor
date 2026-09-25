@@ -600,6 +600,33 @@ document.getElementById('closureNote').addEventListener('blur', function () {
     showMessage('備考を更新しました', 'success');
 });
 
+// 解除予定日（reopenDate）の設定。空文字は未定としてプロパティごと削除する
+function setClosureReopenDate(value) {
+    const feature = ClosureEditor.state.selectedFeature;
+    if (!feature || !feature.properties) return;
+
+    const currentDate = feature.properties.reopenDate || '';
+    if (value === currentDate) return;
+
+    if (value) feature.properties.reopenDate = value;
+    else delete feature.properties.reopenDate;
+    ClosureEditor.touchUpdatedAt(feature);
+    ClosureEditor.updateClosurePopup(feature);
+
+    showMessage(value ? '解除予定を更新しました' : '解除予定を未定にしました', 'success');
+}
+
+// 解除予定（date入力）の変更時の処理。日付が確定したとき・消去したときに発生する
+document.getElementById('closureReopenDate').addEventListener('change', function () {
+    setClosureReopenDate(this.value);
+});
+
+// 「未定」ボタン: 解除予定を消去する
+document.getElementById('clearClosureReopenDateBtn').addEventListener('click', function () {
+    document.getElementById('closureReopenDate').value = '';
+    setClosureReopenDate('');
+});
+
 // 区分（kind）ラジオボタンの変更イベントリスナー
 document.querySelectorAll('input[name="closureKind"]').forEach(radio => {
     radio.addEventListener('change', function () {

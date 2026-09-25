@@ -165,6 +165,11 @@ function formatClosurePopup(feature) {
     const kindLabel = CLOSURE_KIND_LABELS[props.kind] || CLOSURE_KIND_LABELS[CLOSURE_DEFAULT_KIND];
     lines.push(escapeHtml(kindLabel));
     if (props.reason) lines.push(`理由: ${escapeHtml(props.reason)}`);
+    // 解除予定日（YYYY-MM-DD）。過ぎていれば minoh-hiking と同じく注記する
+    if (props.reopenDate) {
+        const passed = props.reopenDate < getDateIso() ? '（予定日を過ぎています）' : '';
+        lines.push(`解除予定: ${escapeHtml(props.reopenDate)}${passed}`);
+    }
     if (props.note) lines.push(escapeHtml(props.note));
     if (props.updatedAt) lines.push(`更新日: ${escapeHtml(props.updatedAt)}`);
 
@@ -273,13 +278,16 @@ function setReasonRadios(value) {
     });
 }
 
-// 入力欄（名称・備考・各ラジオ）をクリア
+// 入力欄（名称・備考・解除予定・各ラジオ）をクリア
 export function clearClosureInputs() {
     const nameInput = document.getElementById('selectedClosureName');
     if (nameInput) nameInput.value = '';
 
     const noteInput = document.getElementById('closureNote');
     if (noteInput) noteInput.value = '';
+
+    const reopenInput = document.getElementById('closureReopenDate');
+    if (reopenInput) reopenInput.value = '';
 
     setKindRadios(null);
     setReasonRadios(null);
@@ -316,6 +324,7 @@ export function highlightClosure(closureIndex) {
     const props = closure.feature.properties || {};
     document.getElementById('selectedClosureName').value = closure.name;
     document.getElementById('closureNote').value = props.note || '';
+    document.getElementById('closureReopenDate').value = props.reopenDate || '';
     setKindRadios(props.kind === 'difficult' ? 'difficult' : CLOSURE_DEFAULT_KIND);
     setReasonRadios(props.reason || '');
 
