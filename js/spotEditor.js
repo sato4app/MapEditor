@@ -263,7 +263,7 @@ export function addSpotToMap(latlng, loadedData, spotMarkerMap, geoJsonLayer) {
         draggable: true,
         icon: L.divIcon({
             className: 'square-marker',
-            html: `<div style="width: ${style.radius}px; height: ${style.radius}px; background-color: ${style.fillColor}; opacity: ${style.fillOpacity};"></div>`,
+            html: `<div style="width: ${style.radius}px; height: ${style.radius}px; background-color: ${style.fillColor}; opacity: ${style.fillOpacity}; border: 1px solid white; box-sizing: border-box;"></div>`,
             iconSize: [style.radius, style.radius],
             iconAnchor: [style.radius / 2, style.radius / 2]
         })

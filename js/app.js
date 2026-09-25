@@ -307,13 +307,16 @@ document.getElementById('clearRouteBtn').addEventListener('click', async functio
         const startMarker = markerMap.get(startId);
         const endMarker = markerMap.get(endId);
 
+        // 種別（ポイントGPS / point）に応じた既定の色・大きさに戻す
         if (startMarker && startMarker.setStyle) {
-            const { DEFAULTS } = await import('./constants.js');
-            startMarker.setStyle(DEFAULTS.FEATURE_STYLES['ポイントGPS']);
+            const style = RouteEditor.getPointDefaultStyle(startId, data);
+            startMarker.setStyle(style);
+            if (startMarker.setRadius) startMarker.setRadius(style.radius);
         }
         if (endMarker && endMarker.setStyle) {
-            const { DEFAULTS } = await import('./constants.js');
-            endMarker.setStyle(DEFAULTS.FEATURE_STYLES['ポイントGPS']);
+            const style = RouteEditor.getPointDefaultStyle(endId, data);
+            endMarker.setStyle(style);
+            if (endMarker.setRadius) endMarker.setRadius(style.radius);
         }
     }
 

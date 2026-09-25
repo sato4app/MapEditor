@@ -100,8 +100,35 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+// 進入禁止（⛔）の形状（s×s の領域に描く）。色の円に白の横棒。minoh-hiking と同じ描き方
+function noEntryShape(s, color) {
+    const c = s / 2;
+    const r = (s - 2) / 2;
+    const bw = (s * 0.6).toFixed(1);
+    const bh = Math.max(2, Math.round(s * 0.18));
+    return `<circle cx="${c}" cy="${c}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="1" />`
+        + `<rect x="${(s * 0.2).toFixed(1)}" y="${(c - bh / 2).toFixed(1)}" width="${bw}" height="${bh}" rx="${(bh / 4).toFixed(1)}" fill="#ffffff" />`;
+}
+
+// 警戒（⚠ 風）の形状（s×s の領域に描く）。色の三角に黒の内枠と「!」。minoh-hiking と同じ描き方
+// 「!」はフォント差をなくすため文字ではなく棒と点で描く
+function warningShape(s, color) {
+    const c = s / 2;
+    const glyph = '#111827';
+    const pts = `${c},1 ${s - 1},${s - 1} 1,${s - 1}`;
+    // 内枠は外形から d だけ内側。三角（底辺=高さ）の頂点は二等分線方向に
+    // 頂上 d/sin(26.6°)≒2.24d・底角 d/tan(31.7°)≒1.62d ずれる
+    const d = Math.max(1.5, s * 0.08);
+    const inner = `${c},${(1 + 2.24 * d).toFixed(1)} ${(s - 1 - 1.62 * d).toFixed(1)},${(s - 1 - d).toFixed(1)} ${(1 + 1.62 * d).toFixed(1)},${(s - 1 - d).toFixed(1)}`;
+    const w = Math.max(2, s * 0.11);
+    return `<polygon points="${pts}" fill="${color}" stroke="#ffffff" stroke-width="1" />`
+        + `<polygon points="${inner}" fill="none" stroke="${glyph}" stroke-width="1" />`
+        + `<rect x="${(c - w / 2).toFixed(1)}" y="${(s * 0.36).toFixed(1)}" width="${w.toFixed(1)}" height="${(s * 0.28).toFixed(1)}" rx="${(w / 2).toFixed(1)}" fill="${glyph}" />`
+        + `<circle cx="${c}" cy="${(s * 0.76).toFixed(1)}" r="${(w * 0.55).toFixed(1)}" fill="${glyph}" />`;
+}
+
 // 区分（kind）に応じたマーカー形状のHTMLを生成
-// closed: ✖印 / difficult: 三角形
+// closed: 進入禁止 / difficult: 警戒
 function closureShapeHtml(kind, colorOverride) {
     const style = CLOSURE_STYLES[kind] || CLOSURE_STYLES[CLOSURE_DEFAULT_KIND];
     const color = colorOverride || style.color;
@@ -112,17 +139,10 @@ function closureShapeHtml(kind, colorOverride) {
     // 透明な背景矩形でアイコン全体をクリック・ドラッグの当たり領域にする
     const hitArea = `<rect x="0" y="0" width="${box}" height="${box}" fill="transparent" pointer-events="all" />`;
 
-    let shape;
-    if (style.shape === 'triangle') {
-        shape = `<polygon points="${box / 2},${offset} ${offset + size},${offset + size} ${offset},${offset + size}" fill="${color}" />`;
-    } else {
-        const weight = Math.max(2, Math.round(size / 3));
-        shape = `<line x1="${offset}" y1="${offset}" x2="${offset + size}" y2="${offset + size}" stroke="${color}" stroke-width="${weight}" stroke-linecap="round" />`
-            + `<line x1="${offset + size}" y1="${offset}" x2="${offset}" y2="${offset + size}" stroke="${color}" stroke-width="${weight}" stroke-linecap="round" />`;
-    }
+    const shape = (style.shape === 'warning') ? warningShape(size, color) : noEntryShape(size, color);
 
     return `<svg width="${box}" height="${box}" viewBox="0 0 ${box} ${box}" style="display: block;">`
-        + hitArea + shape + `</svg>`;
+        + hitArea + `<g transform="translate(${offset},${offset})">${shape}</g></svg>`;
 }
 
 // 区分（kind）に応じたマーカーアイコン（L.divIcon）を生成

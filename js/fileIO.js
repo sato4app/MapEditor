@@ -13,6 +13,10 @@ let loadedDataInternal = null;
 let lastLoadedFileHandle = null;
 let loadedFileCount = 0;
 
+// type='point' のマーカー（feature -> marker）。後から同じIDのポイントGPSが読み込まれたとき、
+// 取り除く対象のマーカーを feature から引くために使う
+const pointMarkerMap = new WeakMap();
+
 function updateFileCount() {
     const el = document.getElementById('fileCount');
     if (el) el.value = loadedFileCount;
@@ -76,20 +80,27 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
 
                 // 既存データに追加（同IDのポイントGPSがあればExcelを優先して入れ替え）
                 let replacedCount = 0;
+                let hiddenPointCount = 0;
                 newFeatures.forEach(f => {
                     const id = f.properties.id;
+                    const key = pointIdKey(f);
+
+                    // 同じIDの type='point' はポイントGPSを優先して取り除く（表示しない）
+                    hiddenPointCount += removePointsById(data, key, markerMap, geoJsonLayer);
 
                     // 同じIDの既存ポイントGPSを除去
-                    const existingIndex = data.features.findIndex(
-                        ef => ef.properties && ef.properties.type === 'ポイントGPS' && ef.properties.id === id
-                    );
+                    const existingIndex = key ? data.features.findIndex(
+                        ef => ef.properties && ef.properties.type === 'ポイントGPS' && pointIdKey(ef) === key
+                    ) : -1;
                     if (existingIndex !== -1) {
-                        data.features.splice(existingIndex, 1);
-                        const oldMarker = markerMap && markerMap.get(id);
+                        const [existing] = data.features.splice(existingIndex, 1);
+                        // markerMap には既存側のIDで登録されている（数値・文字列の違いがありうる）
+                        const oldId = existing.properties.id;
+                        const oldMarker = markerMap && markerMap.get(oldId);
                         if (oldMarker && geoJsonLayer) {
                             geoJsonLayer.removeLayer(oldMarker);
                         }
-                        if (markerMap) markerMap.delete(id);
+                        if (markerMap) markerMap.delete(oldId);
                         replacedCount++;
                     }
 
@@ -113,9 +124,12 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                 updateStats(data);
 
                 const addedCount = newFeatures.length - replacedCount;
-                const msg = replacedCount > 0
+                let msg = replacedCount > 0
                     ? `${newFeatures.length}件のポイントGPSを読み込みました（${replacedCount}件をExcelで上書き、${addedCount}件を新規追加）`
                     : `${newFeatures.length}件のポイントGPSを読み込みました`;
+                if (hiddenPointCount > 0) {
+                    msg += `。同じIDのポイント${hiddenPointCount}件は表示しません`;
+                }
                 showMessage(msg, 'success');
 
                 // 地図の範囲を調整（オプション）
@@ -135,6 +149,33 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
             this.value = '';
         }
     });
+}
+
+// ポイントID（id、なければ pointId）を比較用の文字列で返す。IDがなければ空文字。
+// Excel のIDは数値のこともあるため、文字列にそろえて比較する
+function pointIdKey(feature) {
+    const props = feature && feature.properties;
+    if (!props) return '';
+    const id = props.id ?? props.pointId;
+    return id == null ? '' : String(id).trim();
+}
+
+// 指定IDの type='point' をデータと地図から取り除く（同じIDのポイントGPSを優先するため）。
+// 取り除いた件数を返す
+function removePointsById(data, key, markerMap, geoJsonLayer) {
+    if (!key) return 0;
+    let removed = 0;
+    for (let i = data.features.length - 1; i >= 0; i--) {
+        const f = data.features[i];
+        if (!f.properties || f.properties.type !== 'point' || pointIdKey(f) !== key) continue;
+        data.features.splice(i, 1);
+        const marker = pointMarkerMap.get(f);
+        if (marker && geoJsonLayer) geoJsonLayer.removeLayer(marker);
+        const markerKey = f.properties.id ?? f.properties.pointId;
+        if (marker && markerMap && markerMap.get(markerKey) === marker) markerMap.delete(markerKey);
+        removed++;
+    }
+    return removed;
 }
 
 // マーカーをID/名称で markerMap に登録する
@@ -264,33 +305,44 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
             // データ初期化 (追加モード)
             let data = initData();
 
-            // 既存ポイントIDと重複するポイントを除外
-            const existingPointIds = new Set(
-                data.features
-                    .filter(f => f.properties && f.properties.type === 'point' && f.properties.id != null)
-                    .map(f => f.properties.id)
-            );
-            const existingGpsIds = new Set(
-                data.features
-                    .filter(f => f.properties && f.properties.type === 'ポイントGPS' && f.properties.id != null)
-                    .map(f => f.properties.id)
-            );
-            let skippedCount = 0;
+            // ポイントIDの重複を除外する。ポイントGPS と point で同じIDがあればポイントGPSを優先し、
+            // point は表示しない（読み込み済み・今回分のどちらにあっても、読み込み順に関係なく）
+            const isGps = f => f.properties && f.properties.type === 'ポイントGPS';
+            const isPoint = f => f.properties && f.properties.type === 'point';
+            const idsOf = pred => new Set(data.features.filter(pred).map(pointIdKey).filter(Boolean));
+            const gpsIds = idsOf(isGps);
+            const pointIds = idsOf(isPoint);
+            let skippedCount = 0;      // 同種の既存ポイントと重複してスキップした件数
+            let hiddenPointCount = 0;  // 同じIDのポイントGPSがあるため表示しない point の件数
+
+            // 1) ポイントGPS: 既存と重複するものはスキップ。残すものと同じIDの既存 point は取り除く
             features = features.filter(f => {
-                if (f.properties && f.properties.type === 'point' && f.properties.id != null) {
-                    if (existingPointIds.has(f.properties.id)) {
-                        skippedCount++;
-                        return false;
-                    }
-                    existingPointIds.add(f.properties.id); // バッチ内重複も除外
+                if (!isGps(f)) return true;
+                const key = pointIdKey(f);
+                if (!key) return true;
+                if (gpsIds.has(key)) {
+                    skippedCount++;
+                    return false;
                 }
-                if (f.properties && f.properties.type === 'ポイントGPS' && f.properties.id != null) {
-                    if (existingGpsIds.has(f.properties.id)) {
-                        skippedCount++;
-                        return false;
-                    }
-                    existingGpsIds.add(f.properties.id); // バッチ内重複も除外
+                gpsIds.add(key); // バッチ内重複も除外
+                hiddenPointCount += removePointsById(data, key, markerMap, geoJsonLayer);
+                return true;
+            });
+
+            // 2) point: 同じIDのポイントGPSがあれば表示しない。既存 point と重複するものはスキップ
+            features = features.filter(f => {
+                if (!isPoint(f)) return true;
+                const key = pointIdKey(f);
+                if (!key) return true;
+                if (gpsIds.has(key)) {
+                    hiddenPointCount++;
+                    return false;
                 }
+                if (pointIds.has(key)) {
+                    skippedCount++;
+                    return false;
+                }
+                pointIds.add(key); // バッチ内重複も除外
                 return true;
             });
 
@@ -314,6 +366,13 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     marker.bindPopup(`${props.id || props.pointId || ''}<br>(Point)`);
 
                     geoJsonLayer.addLayer(marker);
+                    pointMarkerMap.set(f, marker);
+
+                    // ルート選択時に開始・終了ポイントとして強調できるよう、IDで引けるようにする
+                    const pointId = props.id ?? props.pointId;
+                    if (pointId != null && markerMap) {
+                        markerMap.set(pointId, marker);
+                    }
                 }
                 // 1b. ポイントGPS (type="ポイントGPS") -> circleMarker + markerMap登録
                 else if (type === 'ポイントGPS' && f.geometry.type === 'Point') {
@@ -574,9 +633,12 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
             loadedFileCount++;
             updateFileCount();
             updateStats(data);
-            const msg = skippedCount > 0
+            let msg = skippedCount > 0
                 ? `${features.length}件のデータを読み込みました（${skippedCount}件の重複ポイントをスキップ）`
                 : `${features.length}件のデータを読み込みました`;
+            if (hiddenPointCount > 0) {
+                msg += `。ポイントGPSと同じIDのポイント${hiddenPointCount}件は表示しません`;
+            }
             showMessage(msg, 'success');
 
         } catch (error) {

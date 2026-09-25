@@ -255,6 +255,15 @@ function getPointFeature(id, loadedData) {
         || null;
 }
 
+// ポイントIDに対応するマーカーの既定スタイル（type='point' は赤、それ以外はポイントGPS）
+// ルート強調の解除・ルート削除時にマーカーの見た目を戻すために使う
+export function getPointDefaultStyle(id, loadedData) {
+    const feature = getPointFeature(id, loadedData);
+    return (feature && feature.properties.type === 'point')
+        ? DEFAULTS.FEATURE_STYLES['point']
+        : DEFAULTS.FEATURE_STYLES['ポイントGPS'];
+}
+
 // スポットを名前またはIDで検索（全マッチを返す）
 // スポット名の改行(\n)がスペースに変換されている場合もあるため、空白の違いは無視して照合する
 function findSpotsByNameOrId(nameOrId, loadedData) {
@@ -467,12 +476,8 @@ export function resetRouteHighlight(markerMap, map, loadedData) {
         const endFeature = loadedData ? getPointFeature(endId, loadedData) : null;
         const startType = startFeature && startFeature.properties.type;
         const endType = endFeature && endFeature.properties.type;
-        const startDefaultStyle = (startType === 'point')
-            ? DEFAULTS.FEATURE_STYLES['point']
-            : DEFAULTS.FEATURE_STYLES['ポイントGPS'];
-        const endDefaultStyle = (endType === 'point')
-            ? DEFAULTS.FEATURE_STYLES['point']
-            : DEFAULTS.FEATURE_STYLES['ポイントGPS'];
+        const startDefaultStyle = getPointDefaultStyle(startId, loadedData);
+        const endDefaultStyle = getPointDefaultStyle(endId, loadedData);
 
         if (startMarker && startMarker.setStyle) {
             startMarker.setStyle(startDefaultStyle);

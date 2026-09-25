@@ -37,13 +37,13 @@ export const DEFAULTS = {
 
     // フィーチャータイプ別スタイル設定
     FEATURE_STYLES: {
-        // ポイントGPS: 緑(#008000)、円形、半径6px（枠なし）
+        // ポイントGPS: 緑(#00AA00)、円形、半径6px、白枠1px（minoh-hikingの緊急ポイントに合わせる）
         'ポイントGPS': {
             radius: 6,
-            fillColor: '#008000',
-            color: '#008000',
-            weight: 0,
-            stroke: false,
+            fillColor: '#00AA00',
+            color: '#ffffff',
+            weight: 1,
+            stroke: true,
             opacity: 1,
             fillOpacity: 1
         },
@@ -68,11 +68,11 @@ export const DEFAULTS = {
             fillOpacity: 0.8,
             shape: 'diamond'
         },
-        // スポット: 青色(#0000ff)、正方形、12x12px（枠なし）
+        // スポット: 青色(#1E90FF)、正方形、12x12px、白枠1px（minoh-hikingのスポットに合わせる）
         'spot': {
             radius: 12,
-            fillColor: '#0000ff',
-            color: '#0000ff',
+            fillColor: '#1E90FF',
+            color: '#1E90FF',
             weight: 0,
             stroke: false,
             opacity: 1,
@@ -107,9 +107,10 @@ export const MODES = {
 
 // 区分（kind）ごとのマーカースタイル。公開後にユーザーが見る地図（minoh-hiking）の
 // 既定値に合わせ、見え方を揃える。
+// closed: 赤の進入禁止（円に白の横棒）/ difficult: 黄色の警戒（三角に「!」）
 export const CLOSURE_STYLES = {
-    closed: { color: '#DC2626', shape: 'x', size: 10 },
-    difficult: { color: '#F59E0B', shape: 'triangle', size: 16 }
+    closed: { color: '#DC2626', shape: 'noEntry', size: 20 },
+    difficult: { color: '#FACC15', shape: 'warning', size: 20 }
 };
 
 // 新規登録時の既定値。区分・登録理由は未選択にできないため、
@@ -117,8 +118,8 @@ export const CLOSURE_STYLES = {
 export const CLOSURE_DEFAULT_KIND = 'closed';
 export const CLOSURE_DEFAULT_REASON = '工事';
 
-// マーカーアイコンの当たり領域（px）。✖印のように描画部分が細い形状でも
-// 掴んでドラッグできるよう、実際の描画サイズより大きい正方形を確保する。
+// マーカーアイコンの当たり領域（px）。形状の縁ぎりぎりでも掴んでドラッグできるよう、
+// 実際の描画サイズより大きい正方形を確保する。
 export const CLOSURE_ICON_BOX = 24;
 
 // 選択中マーカーのハイライト色（アクア）

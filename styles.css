@@ -780,7 +780,7 @@ button:hover {
     background-color: #0056b3;
 }
 
-/* 登録地点マーカー（SVGで✖印・三角形・？を描画するため背景は透明） */
+/* 登録地点マーカー（SVGで進入禁止・警戒の形状を描画するため背景は透明） */
 .closure-marker {
     background: transparent;
     border: none;
@@ -994,9 +994,8 @@ button:hover {
 }
 
 .marker-square {
-    background-color: #0000ff;
-    /* Blue */
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+    background-color: #1E90FF;
+    /* 青（minoh-hikingのスポットに合わせ、白枠1pxのみ・影なし） */
     border: 1px solid white;
 }
 
