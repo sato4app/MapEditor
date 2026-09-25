@@ -385,9 +385,9 @@ MapGPS-{YYYYMMDD}_P{ポイント数}_R{ルート数}_S{スポット数}.geojson
 | 区分（`kind`） | 形状 | 色 | 描画サイズ |
 |---------------|------|----|-----------|
 | `closed`（通行止め） | 進入禁止（円に白の横棒） | 赤 `#DC2626` | 20px |
-| `difficult`（通行困難） | 警戒（三角に黒の内枠と「!」） | 黄 `#FACC15` | 20px |
+| `difficult`（通行困難） | 警戒（三角に黒の内枠と「!」） | 黄 `#FACC15` | 24px |
 
-- アイコンの当たり領域は 24×24px の正方形（細い形状でも掴んでドラッグできるようにするため）
+- アイコンの当たり領域は 28×28px の正方形（形状の縁でも掴んでドラッグできるようにするため）
 - 選択中の地点はアクア色 `#00ffff` でハイライト
 - 地点マーカーはモードに関わらず地図上に表示され続けます（マーカークリックによる選択は本モードでのみ有効）
 
@@ -512,8 +512,8 @@ Closure-{YYYYMMDD}_C{通行止め件数}_D{通行困難件数}.geojson
 | `route_waypoint` | 菱形 | 橙 `#f58220` | 5×5px（不透明度 0.8） |
 | `spot` | 正方形（白枠 1px） | 青 `#1E90FF` | 12×12px（既定描画は 10×10px） |
 | `area` | ポリゴン | シアン `#00ffff` | 境界線太さ 3、塗り不透明度 0.2 |
-| `closure`（`closed`） | 進入禁止 | 赤 `#DC2626` | 20px（当たり領域 24×24px） |
-| `closure`（`difficult`） | 警戒 | 黄 `#FACC15` | 20px（当たり領域 24×24px） |
+| `closure`（`closed`） | 進入禁止 | 赤 `#DC2626` | 20px（当たり領域 28×28px） |
+| `closure`（`difficult`） | 警戒 | 黄 `#FACC15` | 24px（当たり領域 28×28px） |
 
 `ポイントGPS`・`spot`・`closure` の色・形状は公開先の地図（minoh-hiking）のマーカーに合わせています。`ポイントGPS`〜`area` は `DEFAULTS.FEATURE_STYLES`、`closure` は `CLOSURE_STYLES` / `CLOSURE_ICON_BOX` / `CLOSURE_HIGHLIGHT_COLOR` に定義します。新規登録時の既定値は `CLOSURE_DEFAULT_KIND`（`closed`）/ `CLOSURE_DEFAULT_REASON`（`工事`）で定義します。
 

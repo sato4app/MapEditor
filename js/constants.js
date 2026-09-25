@@ -110,7 +110,7 @@ export const MODES = {
 // closed: 赤の進入禁止（円に白の横棒）/ difficult: 黄色の警戒（三角に「!」）
 export const CLOSURE_STYLES = {
     closed: { color: '#DC2626', shape: 'noEntry', size: 20 },
-    difficult: { color: '#FACC15', shape: 'warning', size: 20 }
+    difficult: { color: '#FACC15', shape: 'warning', size: 24 }
 };
 
 // 新規登録時の既定値。区分・登録理由は未選択にできないため、
@@ -120,7 +120,7 @@ export const CLOSURE_DEFAULT_REASON = '工事';
 
 // マーカーアイコンの当たり領域（px）。形状の縁ぎりぎりでも掴んでドラッグできるよう、
 // 実際の描画サイズより大きい正方形を確保する。
-export const CLOSURE_ICON_BOX = 24;
+export const CLOSURE_ICON_BOX = 28;
 
 // 選択中マーカーのハイライト色（アクア）
 export const CLOSURE_HIGHLIGHT_COLOR = '#00ffff';
