@@ -780,7 +780,7 @@ button:hover {
     background-color: #0056b3;
 }
 
-/* 登録地点マーカー（SVGで進入禁止・警戒の形状を描画するため背景は透明） */
+/* 登録地点マーカー（SVGで通行止め・警戒の形状を描画するため背景は透明） */
 .closure-marker {
     background: transparent;
     border: none;

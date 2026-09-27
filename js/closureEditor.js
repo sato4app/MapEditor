@@ -100,35 +100,53 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-// 進入禁止（⛔）の形状（s×s の領域に描く）。色の円に白の横棒。minoh-hiking と同じ描き方
-function noEntryShape(s, color) {
+// 通行止め（🚷 風）の形状（s×s の領域に描く）。minoh-hiking と同じ描き方
+// ISO 7010 P004「No thoroughfare」・道路標識「歩行者通行止め」風。白地に色の輪と斜線、
+// 中に黒の歩く人。斜線は人の上に重ねる。人の形は 100 四方で設計して輪の内側に収める
+function noThoroughfareShape(s, color) {
     const c = s / 2;
-    const r = (s - 2) / 2;
-    const bw = (s * 0.6).toFixed(1);
-    const bh = Math.max(2, Math.round(s * 0.18));
-    return `<circle cx="${c}" cy="${c}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="1" />`
-        + `<rect x="${(s * 0.2).toFixed(1)}" y="${(c - bh / 2).toFixed(1)}" width="${bw}" height="${bh}" rx="${(bh / 4).toFixed(1)}" fill="#ffffff" />`;
+    const glyph = '#111827';
+    const sw = Math.max(2, s * 0.13);          // 輪・斜線の太さ
+    const rr = s / 2 - 1 - sw / 2;             // 輪の中心半径（外側 1px は白の縁）
+    const ri = rr - sw / 2;                    // 輪の内側の半径
+    const k = (ri * 1.7) / 100;
+    const o = c - 50 * k;
+    const q = (x, y) => `${(o + x * k).toFixed(2)},${(o + y * k).toFixed(2)}`;
+    const body =
+        `M${q(52, 31)} L${q(46, 60)} ` +
+        `M${q(50, 36)} L${q(37, 50)} L${q(33, 62)} ` +
+        `M${q(50, 36)} L${q(62, 47)} L${q(72, 51)} ` +
+        `M${q(46, 60)} L${q(58, 76)} L${q(61, 93)} ` +
+        `M${q(46, 60)} L${q(37, 78)} L${q(25, 89)}`;
+    const d = ri * 0.74;
+    return `<circle cx="${c}" cy="${c}" r="${(s / 2 - 0.5).toFixed(2)}" fill="#ffffff" />`
+        + `<circle cx="${c}" cy="${c}" r="${rr.toFixed(2)}" fill="#ffffff" stroke="${color}" stroke-width="${sw.toFixed(2)}" />`
+        + `<path d="${body}" fill="none" stroke="${glyph}" stroke-width="${(13 * k).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" />`
+        + `<circle cx="${(o + 56 * k).toFixed(2)}" cy="${(o + 15 * k).toFixed(2)}" r="${(11 * k).toFixed(2)}" fill="${glyph}" />`
+        + `<line x1="${(c - d).toFixed(2)}" y1="${(c - d).toFixed(2)}" x2="${(c + d).toFixed(2)}" y2="${(c + d).toFixed(2)}" stroke="${color}" stroke-width="${(sw * 0.9).toFixed(2)}" />`;
 }
 
-// 警戒（⚠ 風）の形状（s×s の領域に描く）。色の三角に黒の内枠と「!」。minoh-hiking と同じ描き方
+// 警戒（日本の道路標識の警戒標識風）の形状（s×s の領域に描く）。minoh-hiking と同じ描き方
+// 色のひし形に黒枠と「!」、その外側にひし形に沿った白の縁（地図の黄色い線から切り離すため）。
+// 白の縁は s×s の外へ約 ring px はみ出すため、CLOSURE_ICON_BOX はその分の余白を見込んでおく。
 // 「!」はフォント差をなくすため文字ではなく棒と点で描く
 function warningShape(s, color) {
     const c = s / 2;
     const glyph = '#111827';
-    const pts = `${c},1 ${s - 1},${s - 1} 1,${s - 1}`;
-    // 内枠は外形から d だけ内側。三角（底辺=高さ）の頂点は二等分線方向に
-    // 頂上 d/sin(26.6°)≒2.24d・底角 d/tan(31.7°)≒1.62d ずれる
-    const d = Math.max(1.5, s * 0.08);
-    const inner = `${c},${(1 + 2.24 * d).toFixed(1)} ${(s - 1 - 1.62 * d).toFixed(1)},${(s - 1 - d).toFixed(1)} ${(1 + 1.62 * d).toFixed(1)},${(s - 1 - d).toFixed(1)}`;
+    const sw = Math.max(1.5, s * 0.09);       // 黒枠の太さ
+    const ring = Math.max(1.5, s * 0.1);      // 黒枠の外に見える白の縁の幅
+    const inset = sw / 2 + 0.5;
+    const p = (x, y) => `${x.toFixed(1)},${y.toFixed(1)}`;
+    const pts = `${p(c, inset)} ${p(s - inset, c)} ${p(c, s - inset)} ${p(inset, c)}`;
     const w = Math.max(2, s * 0.11);
-    return `<polygon points="${pts}" fill="${color}" stroke="#ffffff" stroke-width="1" />`
-        + `<polygon points="${inner}" fill="none" stroke="${glyph}" stroke-width="1" />`
-        + `<rect x="${(c - w / 2).toFixed(1)}" y="${(s * 0.36).toFixed(1)}" width="${w.toFixed(1)}" height="${(s * 0.28).toFixed(1)}" rx="${(w / 2).toFixed(1)}" fill="${glyph}" />`
-        + `<circle cx="${c}" cy="${(s * 0.76).toFixed(1)}" r="${(w * 0.55).toFixed(1)}" fill="${glyph}" />`;
+    return `<polygon points="${pts}" fill="#ffffff" stroke="#ffffff" stroke-width="${(sw + ring * 2).toFixed(1)}" stroke-linejoin="round" />`
+        + `<polygon points="${pts}" fill="${color}" stroke="${glyph}" stroke-width="${sw.toFixed(1)}" stroke-linejoin="round" />`
+        + `<rect x="${(c - w / 2).toFixed(1)}" y="${(s * 0.27).toFixed(1)}" width="${w.toFixed(1)}" height="${(s * 0.3).toFixed(1)}" rx="${(w / 2).toFixed(1)}" fill="${glyph}" />`
+        + `<circle cx="${c}" cy="${(s * 0.7).toFixed(1)}" r="${(w * 0.55).toFixed(1)}" fill="${glyph}" />`;
 }
 
 // 区分（kind）に応じたマーカー形状のHTMLを生成
-// closed: 進入禁止 / difficult: 警戒
+// closed: 通行止め（歩行者通行止め風）/ difficult: 警戒（ひし形）
 function closureShapeHtml(kind, colorOverride) {
     const style = CLOSURE_STYLES[kind] || CLOSURE_STYLES[CLOSURE_DEFAULT_KIND];
     const color = colorOverride || style.color;
@@ -139,7 +157,7 @@ function closureShapeHtml(kind, colorOverride) {
     // 透明な背景矩形でアイコン全体をクリック・ドラッグの当たり領域にする
     const hitArea = `<rect x="0" y="0" width="${box}" height="${box}" fill="transparent" pointer-events="all" />`;
 
-    const shape = (style.shape === 'warning') ? warningShape(size, color) : noEntryShape(size, color);
+    const shape = (style.shape === 'warning') ? warningShape(size, color) : noThoroughfareShape(size, color);
 
     return `<svg width="${box}" height="${box}" viewBox="0 0 ${box} ${box}" style="display: block;">`
         + hitArea + `<g transform="translate(${offset},${offset})">${shape}</g></svg>`;

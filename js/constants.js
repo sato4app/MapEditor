@@ -107,9 +107,10 @@ export const MODES = {
 
 // 区分（kind）ごとのマーカースタイル。公開後にユーザーが見る地図（minoh-hiking）の
 // 既定値に合わせ、見え方を揃える。
-// closed: 赤の進入禁止（円に白の横棒）/ difficult: 黄色の警戒（三角に「!」）
+// closed: 通行止め（白地に赤の輪と斜線、中に歩く人）/ difficult: 警戒（黄色のひし形に黒枠と「!」）
+// サイズは PC で使う MapEditor 向けに minoh-hiking（スマホ主体）と別に決めている
 export const CLOSURE_STYLES = {
-    closed: { color: '#DC2626', shape: 'noEntry', size: 20 },
+    closed: { color: '#DC2626', shape: 'noThoroughfare', size: 20 },
     difficult: { color: '#FACC15', shape: 'warning', size: 24 }
 };
 
@@ -119,8 +120,9 @@ export const CLOSURE_DEFAULT_KIND = 'closed';
 export const CLOSURE_DEFAULT_REASON = '工事';
 
 // マーカーアイコンの当たり領域（px）。形状の縁ぎりぎりでも掴んでドラッグできるよう、
-// 実際の描画サイズより大きい正方形を確保する。
-export const CLOSURE_ICON_BOX = 28;
+// 実際の描画サイズより大きい正方形を確保する。警戒のひし形は白の縁が描画サイズの
+// 外へはみ出す（24px で縁込み約 28px）ため、その分も含めて収める。
+export const CLOSURE_ICON_BOX = 36;
 
 // 選択中マーカーのハイライト色（アクア）
 export const CLOSURE_HIGHLIGHT_COLOR = '#00ffff';
