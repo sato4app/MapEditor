@@ -113,6 +113,31 @@ export function updateSpotDropdown() {
     }
 }
 
+// スポットの入力欄（選択スポット・英語名・スポット区分）を空にする
+export function clearSpotInputs() {
+    ['selectedSpotName', 'spotEnglishName', 'spotCategory'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
+// スポットの英語名（englishName）を設定する。空文字はプロパティごと削除する。
+// 出力ファイルで名称と並ぶよう、englishName は name の直後に置く
+export function setSpotEnglishName(feature, value) {
+    if (!feature) return;
+    if (!feature.properties) feature.properties = {};
+    const props = feature.properties;
+
+    // properties オブジェクト自体は差し替えず、キーの並びだけを組み直す
+    const entries = Object.entries(props).filter(([key]) => key !== 'englishName');
+    Object.keys(props).forEach(key => delete props[key]);
+    entries.forEach(([key, val]) => {
+        props[key] = val;
+        if (key === 'name' && value) props.englishName = value;
+    });
+    if (value && !('englishName' in props)) props.englishName = value;
+}
+
 // スポット選択時の処理
 export function highlightSpot(spotIndex, spotMarkerMap) {
     const previousSpotMarker = selectedSpotMarker;
@@ -124,8 +149,7 @@ export function highlightSpot(spotIndex, spotMarkerMap) {
         }
         setSelectedSpotFeature(null);
         setSelectedSpotMarker(null);
-        document.getElementById('selectedSpotName').value = '';
-        document.getElementById('spotCategory').value = '';
+        clearSpotInputs();
         return;
     }
 
@@ -151,6 +175,10 @@ export function highlightSpot(spotIndex, spotMarkerMap) {
     // テキストボックスは改行を保持できないため、改行はスペースに変換して表示する
     // （元の名称は feature 側にそのまま残す）
     document.getElementById('selectedSpotName').value = normalizeId(spot.name);
+
+    // 英語名を表示（名称と同じく改行はスペースに変換）
+    const englishName = spot.feature.properties && spot.feature.properties.englishName;
+    document.getElementById('spotEnglishName').value = normalizeId(englishName);
 
     // スポット区分を表示
     const category = spot.feature.properties && spot.feature.properties.category;
@@ -460,10 +488,7 @@ function removeDuplicateSpot(feature, marker, map, spotMarkerMap, getLoadedData,
     if (selectedSpotFeature === feature) {
         setSelectedSpotFeature(null);
         setSelectedSpotMarker(null);
-        const nameInput = document.getElementById('selectedSpotName');
-        if (nameInput) nameInput.value = '';
-        const categorySelect = document.getElementById('spotCategory');
-        if (categorySelect) categorySelect.value = '';
+        clearSpotInputs();
         const spotSelect = document.getElementById('spotSelect');
         if (spotSelect) spotSelect.value = '';
     }

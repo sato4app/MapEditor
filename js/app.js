@@ -51,8 +51,7 @@ document.querySelectorAll('input[name="mode"]').forEach(radio => {
             }
 
             document.getElementById('spotSelect').value = '';
-            document.getElementById('selectedSpotName').value = '';
-            document.getElementById('spotCategory').value = '';
+            SpotEditor.clearSpotInputs();
         }
 
         // エリアモードから離れる場合、エリア関連の状態をリセット
@@ -426,6 +425,22 @@ document.getElementById('selectedSpotName').addEventListener('blur', function ()
     showMessage('スポット名を更新しました', 'success');
 });
 
+// 英語名の変更（Enterキーまたはフォーカス離脱で確定）。空欄にすると英語名を消去する
+document.getElementById('spotEnglishName').addEventListener('change', function () {
+    const feature = SpotEditor.selectedSpotFeature;
+    if (!feature) return;
+
+    const newValue = this.value.trim();
+    this.value = newValue;
+
+    // 表示は改行をスペースに変換しているため、表示と同じ値なら「未編集」とみなす
+    const currentValue = (feature.properties && feature.properties.englishName) || '';
+    if (newValue === RouteEditor.normalizeId(currentValue)) return;
+
+    SpotEditor.setSpotEnglishName(feature, newValue);
+    showMessage(newValue ? 'スポットの英語名を更新しました' : 'スポットの英語名を消去しました', 'success');
+});
+
 // スポット区分ドロップダウンの変更イベントリスナー
 document.getElementById('spotCategory').addEventListener('change', function () {
     const newCategory = this.value;
@@ -545,8 +560,7 @@ document.getElementById('deleteSpotBtn').addEventListener('click', function () {
 
     // ドロップダウンの選択をクリア
     document.getElementById('spotSelect').value = '';
-    document.getElementById('selectedSpotName').value = '';
-    document.getElementById('spotCategory').value = '';
+    SpotEditor.clearSpotInputs();
 
     showMessage('スポットを削除しました', 'success');
 });
