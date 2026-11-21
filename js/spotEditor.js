@@ -4,6 +4,7 @@ import { DEFAULTS, MODES, SPOT_CATEGORIES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats } from './stats.js';
 import { normalizeId } from './routeEditor.js';
+import { popupHtml } from './popup.js';
 
 // スポット編集の状態管理
 export let allSpots = [];
@@ -20,17 +21,13 @@ let duplicateExtractRectangle = null; // ドラッグ中/直近の長方形レ�
 const duplicateMarkedSpots = new Set(); // アクア色に変えたマーカー(featureを保持)
 const duplicateClickHandlerMap = new Map(); // feature -> 削除用clickハンドラ
 
-// スポット名をポップアップ用のHTMLに変換する
-// 改行(\n)は <br> に変換して2行以上で表示する。CSSの white-space: pre-line は
-// Leafletのポップアップ幅計算（一時的に nowrap にして1行幅を測る処理）を無効にし、
-// 改行の無い名称まで数文字ごとに折り返されてしまうため使わない
-export function toSpotNameHtml(name) {
-    const text = typeof name === 'string' ? name : '';
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\r?\n/g, '<br>');
+// スポットのマーカーにポップアップ（名称・英語名）を付ける。
+// 内容は開くたびに feature から作るため、名称・英語名を変更すると次に開いたときに反映される
+export function bindSpotPopup(marker, feature) {
+    marker.bindPopup(() => {
+        const props = feature.properties || {};
+        return popupHtml([props.name || 'スポット', props.englishName], '(Spot)');
+    });
 }
 
 // 状態変更用のセッター関数
@@ -300,7 +297,7 @@ export function addSpotToMap(latlng, loadedData, spotMarkerMap, geoJsonLayer) {
     // 既定はドラッグ無効（追加・移動モードでのみ有効化する）
     if (marker.dragging) marker.dragging.disable();
 
-    marker.bindPopup(`${toSpotNameHtml(newSpotName)}<br>(Spot)`);
+    bindSpotPopup(marker, newSpotFeature);
 
     marker.on('click', function(e) {
         // 重複スポット抽出モード中はドロップダウン選択を行わない

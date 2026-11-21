@@ -3,8 +3,9 @@
 import { DEFAULTS, MODES, NON_CLOSURE_TYPES, CLOSURE_DEFAULT_KIND } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateTimeIso } from './stats.js';
-import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, importRouteNames, getRouteNames, setRouteName, refreshRouteNameFields, state as routeEditorState } from './routeEditor.js';
-import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, toSpotNameHtml, setSpotEnglishName, selectedSpotFeature } from './spotEditor.js';
+import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, bindRouteLinePopup, parseRouteId, normalizeId, isSameId, importRouteNames, getRouteNames, setRouteName, refreshRouteNameFields, state as routeEditorState } from './routeEditor.js';
+import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, bindSpotPopup, setSpotEnglishName, selectedSpotFeature } from './spotEditor.js';
+import { popupHtml } from './popup.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 import * as ClosureEditor from './closureEditor.js';
 
@@ -111,7 +112,7 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                     const lng = f.geometry.coordinates[0];
                     const style = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
                     const marker = L.circleMarker([lat, lng], style);
-                    marker.bindPopup(pointGpsPopupHtml(f.properties));
+                    bindPointGpsPopup(marker, f);
                     geoJsonLayer.addLayer(marker);
                     if (id && markerMap) {
                         markerMap.set(id, marker);
@@ -166,13 +167,13 @@ function toText(value) {
     return String(value).trim();
 }
 
-// ポイントGPS のポップアップ（ID・名称・英語名のうち値のあるもの）
-function pointGpsPopupHtml(props) {
-    const lines = [props.id, props.name, props.englishName]
-        .map(toText)
-        .filter(text => text !== '')
-        .map(toSpotNameHtml);
-    return [...lines, '(PointGPS)'].join('<br>');
+// ポイントGPS のマーカーにポップアップ（ID・名称・英語名のうち値のあるもの）を付ける。
+// 内容は開くたびに feature から作るため、値を変更すると次に開いたときに反映される
+function bindPointGpsPopup(marker, feature) {
+    marker.bindPopup(() => {
+        const props = feature.properties || {};
+        return popupHtml([props.id, props.name, props.englishName], '(PointGPS)');
+    });
 }
 
 // 指定IDの type='point' をデータと地図から取り除く（同じIDのポイントGPSを優先するため）。
@@ -397,7 +398,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.circleMarker([lat, lng], style);
 
-                    marker.bindPopup(pointGpsPopupHtml(props));
+                    bindPointGpsPopup(marker, f);
 
                     geoJsonLayer.addLayer(marker);
 
@@ -418,6 +419,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     if (isEditableRoute) {
                         // 編集用ルート: ポリラインで参考表示（変換処理でポイントGPS/route_waypointマーカーを別途作成）
                         const line = L.polyline(latLngs, { color: '#f58220', weight: 2, opacity: 0.6 });
+                        bindRouteLinePopup(line, routeId, map);
                         geoJsonLayer.addLayer(line);
                         // 背景ポリラインを routeLineMap に登録（waypoint削除時に再描画できるよう）
                         routeEditorState.routeLineMap.set(routeId, line);
@@ -451,7 +453,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.marker([lat, lng], { draggable: true, icon: icon });
 
-                    marker.bindPopup(`${toSpotNameHtml(props.name || 'スポット')}<br>(Spot)`);
+                    bindSpotPopup(marker, f);
 
                     // スポットモードでクリックしたときにドロップダウンと連動
                     marker.on('click', function(e) {
@@ -636,7 +638,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
             // ルート編集ドロップダウンを更新（GeoJSON読み込み後に選択可能にする）
             extractPointsAndRoutes(data);
             updateDropdowns(data);
-            initAllRouteLines(data, geoJsonLayer);
+            initAllRouteLines(data, geoJsonLayer, map);
 
             // スポット編集ドロップダウンを更新
             extractSpots(data);

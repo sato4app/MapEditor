@@ -2,6 +2,7 @@
 
 import { DEFAULTS } from './constants.js';
 import { showMessage } from './message.js';
+import { popupHtml } from './popup.js';
 
 // ルートID（route_{開始ID}_to_{終了ID}）の解析
 // 開始・終了がスポットの場合、そのスポット名に改行(\n)が含まれることがある。
@@ -451,8 +452,26 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
     return null;
 }
 
+// 背景ポリラインのクリックで、ルートのポップアップ（ルートID・名称・英語名）を開く。
+// 内容は開くたびに作るため、名称・英語名を変更すると次に開いたときに反映される。
+// minoh-hiking と同じく bindPopup は使わず、クリック時に開く。地図クリックで中間点・スポット・
+// エリアの頂点・登録地点を追加する編集中は、各モードが地図に click を登録している。その間は開かず、
+// クリックを地図へ通す（bindPopup の既定動作では地図の click が止まり、線の上で追加できなくなるため）
+export function bindRouteLinePopup(line, routeId, map) {
+    line.on('click', function (e) {
+        if (map.listens('click')) return;
+        // 地図の click（開いたポップアップを閉じる処理）へ伝えない。bindPopup の既定動作と同じ
+        L.DomEvent.stop(e);
+        const names = getRouteNames(routeId);
+        L.popup()
+            .setLatLng(e.latlng)
+            .setContent(popupHtml([routeId, names.name, names.englishName], '(Route)'))
+            .openOn(map);
+    });
+}
+
 // 全ルートの背景ポリラインを初期化（選択状態によらず常に表示）
-export function initAllRouteLines(loadedData, geoJsonLayer) {
+export function initAllRouteLines(loadedData, geoJsonLayer, map) {
     state.allRoutes.forEach(({ routeId }) => {
         const coordinates = getCoordinatesFromGeoJSON(routeId, loadedData);
         if (coordinates && coordinates.length >= 2) {
@@ -460,6 +479,7 @@ export function initAllRouteLines(loadedData, geoJsonLayer) {
                 state.routeLineMap.get(routeId).setLatLngs(coordinates);
             } else {
                 const line = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
+                bindRouteLinePopup(line, routeId, map);
                 geoJsonLayer.addLayer(line);
                 state.routeLineMap.set(routeId, line);
             }
@@ -520,9 +540,11 @@ export function highlightRoute(routeId, loadedData, markerMap, map) {
 
     const coordinates = getCoordinatesFromGeoJSON(routeId, loadedData);
     if (coordinates) {
+        // クリックは下の背景ポリラインへ通す（ルートのポップアップを開けるように）
         state.selectedRouteLine = L.polyline(coordinates, {
             color: '#ef454a',
-            weight: 2
+            weight: 2,
+            interactive: false
         }).addTo(map);
     }
 }
@@ -652,11 +674,13 @@ export function redrawRouteLine(routeId, loadedData, map) {
     if (coordinates) {
         state.selectedRouteLine = L.polyline(coordinates, {
             color: '#ef454a',
-            weight: 2
+            weight: 2,
+            interactive: false
         }).addTo(map);
 
         if (window.geoJsonLayer) {
             const newBgLine = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
+            bindRouteLinePopup(newBgLine, routeId, map);
             window.geoJsonLayer.addLayer(newBgLine);
             state.routeLineMap.set(routeId, newBgLine);
         }

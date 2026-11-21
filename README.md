@@ -93,6 +93,7 @@ js/
   mapCore.js        Leaflet 地図とコントロールの初期化
   message.js        トーストメッセージ表示
   stats.js          統計情報の集計、日付・日時文字列の生成
+  popup.js          ポップアップの表示内容（ポイントGPS・ルート・スポット共通）
   excelLoader.js    Excel(.xlsx) の読み込みと検証、ルート・スポット(Excel) の作成
   fileIO.js         GeoJSON の読み込み／出力、ルート・スポット(Excel) の入出力、登録地点の専用ファイル入出力
   routeEditor.js    ルート編集（中間点の追加・移動・削除、順序最適化、ハイライト、名称・英語名の管理）
