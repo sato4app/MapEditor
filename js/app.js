@@ -152,6 +152,27 @@ document.getElementById('routePath').addEventListener('change', function () {
 
     // ルートをハイライト
     RouteEditor.highlightRoute(selectedRouteId, getLoadedData(), markerMap, map);
+
+    // 名称・英語名を選択したルートの値で表示
+    RouteEditor.refreshRouteNameFields();
+});
+
+// ルートの名称・英語名の変更（Enterキーまたはフォーカス離脱で確定。GeoJSON出力時にルートのFeatureへ付与する）
+[
+    { inputId: 'routeName', field: 'name', label: '名称' },
+    { inputId: 'routeEnglishName', field: 'englishName', label: '英語名' }
+].forEach(({ inputId, field, label }) => {
+    document.getElementById(inputId).addEventListener('change', function () {
+        const routeId = document.getElementById('routePath').value;
+        if (!routeId) return;
+
+        const newValue = this.value.trim();
+        this.value = newValue;
+        if (newValue === RouteEditor.getRouteNames(routeId)[field]) return;
+
+        RouteEditor.setRouteName(routeId, field, newValue);
+        showMessage(newValue ? `ルートの${label}を更新しました` : `ルートの${label}を消去しました`, 'success');
+    });
 });
 
 // 追加・移動ボタン
@@ -329,11 +350,15 @@ document.getElementById('clearRouteBtn').addEventListener('click', async functio
         RouteEditor.state.allRoutes.splice(routeIndex, 1);
     }
 
+    // ルートの名称・英語名も削除
+    RouteEditor.deleteRouteNames(path);
+
     // route-dropdown-shortとroute-dropdown-longを更新
     RouteEditor.updateDropdowns(getLoadedData());
 
     // route-dropdown-fullを更新して選択無し状態にする
     document.getElementById('routePath').value = '';
+    RouteEditor.refreshRouteNameFields();
 
     showMessage('ルートを削除(=クリア)しました', 'success');
 });

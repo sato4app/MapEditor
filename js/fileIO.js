@@ -3,7 +3,7 @@
 import { DEFAULTS, MODES, NON_CLOSURE_TYPES, CLOSURE_DEFAULT_KIND } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateTimeIso } from './stats.js';
-import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, state as routeEditorState } from './routeEditor.js';
+import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, importRouteNames, getRouteNames, state as routeEditorState } from './routeEditor.js';
 import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, toSpotNameHtml } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 import * as ClosureEditor from './closureEditor.js';
@@ -616,6 +616,9 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                 }
             });
 
+            // 今回読み込んだルートの名称・英語名を取り込む（ドロップダウン更新時に名称欄へ反映される）
+            importRouteNames(features);
+
             // ルート編集ドロップダウンを更新（GeoJSON読み込み後に選択可能にする）
             extractPointsAndRoutes(data);
             updateDropdowns(data);
@@ -797,11 +800,16 @@ export function setupFileExport() {
                 endCoords = resolveCoordsById(endPoint, [startCoords[0], startCoords[1]]);
             }
 
+            // 名称・英語名は値があるときのみ出力
+            const { name, englishName } = getRouteNames(routeId);
+
             return {
                 type: 'Feature',
                 properties: {
                     type: 'route',
                     id: routeId,
+                    ...(name ? { name } : {}),
+                    ...(englishName ? { englishName } : {}),
                     startPoint,
                     endPoint,
                     startPointGPS: startCoords || null,

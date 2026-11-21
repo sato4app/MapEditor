@@ -40,6 +40,7 @@ export const state = {
     selectedRouteId: null,
     selectedRouteLine: null,
     routeLineMap: new Map(), // routeId -> 背景ポリライン (geoJsonLayerに追加したもの)
+    routeNames: new Map(), // routeId -> { name, englishName }（GeoJSON出力時にルートのFeatureへ付与）
     isAddMoveMode: false,
     isDeleteMode: false,
     mapClickHandler: null,
@@ -221,6 +222,75 @@ export function updateRoutePathDropdown(loadedData) {
         routePathSelect.value = previousSelection;
     }
 
+    // 選択が外れた場合も含め、名称・英語名の表示を選択中のルートに合わせる
+    refreshRouteNameFields();
+}
+
+// ========================================
+// ルートの名称・英語名
+// ========================================
+
+// ルートの名称・英語名を取得（未設定の項目は空文字）
+export function getRouteNames(routeId) {
+    return state.routeNames.get(routeId) || { name: '', englishName: '' };
+}
+
+// ルートの名称（field='name'）または英語名（field='englishName'）を設定。空文字は未設定として扱う
+export function setRouteName(routeId, field, value) {
+    if (!routeId) return;
+    const names = { ...getRouteNames(routeId), [field]: value };
+    if (names.name || names.englishName) {
+        state.routeNames.set(routeId, names);
+    } else {
+        state.routeNames.delete(routeId);
+    }
+}
+
+// ルートの名称・英語名を削除（ルートのクリア時に使う）
+export function deleteRouteNames(routeId) {
+    state.routeNames.delete(routeId);
+}
+
+// 名称・英語名のテキストボックスを選択中のルートの値で更新する（未選択時は空欄・入力不可）
+export function refreshRouteNameFields() {
+    const routeId = document.getElementById('routePath').value;
+    const names = getRouteNames(routeId);
+    [['routeName', names.name], ['routeEnglishName', names.englishName]].forEach(([inputId, value]) => {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = value;
+        input.disabled = !routeId;
+    });
+}
+
+function toTrimmedText(value) {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+// ルートFeatureの name を名称として読む。
+// GeoReferencer が自動で付ける表示名（{startPoint} ～ {endPoint}）は名称として扱わない
+function readRouteName(props) {
+    const name = toTrimmedText(props.name);
+    if (!name) return '';
+    const ids = (props.startPoint && props.endPoint)
+        ? { startId: props.startPoint, endId: props.endPoint }
+        : parseRouteId(props.id);
+    if (ids && isSameId(name, `${ids.startId} ～ ${ids.endId}`)) return '';
+    return name;
+}
+
+// 読み込んだ type='route' LineString から名称・英語名を取り込む。
+// 既に値がある項目は上書きしない（先に読み込んだ値・画面で編集した値を優先）
+export function importRouteNames(features) {
+    features.forEach(f => {
+        const props = f.properties;
+        if (!props || props.type !== 'route' || !props.id) return;
+        if (!f.geometry || f.geometry.type !== 'LineString') return;
+
+        const current = getRouteNames(props.id);
+        if (!current.name) setRouteName(props.id, 'name', readRouteName(props));
+        if (!current.englishName) setRouteName(props.id, 'englishName', toTrimmedText(props.englishName));
+    });
 }
 
 // routeId から startId / endId を取得
