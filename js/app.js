@@ -4,7 +4,7 @@ import { MODES } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats } from './stats.js';
 import { initializeMap } from './mapCore.js';
-import { getLoadedData, initData, setupFileInput, setupFileExport, setupGeoJsonLoad, setupClosureFileLoad, setupClosureFileExport } from './fileIO.js';
+import { getLoadedData, initData, setupFileInput, setupFileExport, setupGeoJsonLoad, setupRouteSpotExcelLoad, setupRouteSpotExcelExport, setupClosureFileLoad, setupClosureFileExport } from './fileIO.js';
 import * as RouteEditor from './routeEditor.js';
 import * as SpotEditor from './spotEditor.js';
 import * as AreaEditor from './areaEditor.js';
@@ -23,6 +23,8 @@ ClosureEditor.initClosureEditor(map, geoJsonLayer);
 setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap);
 setupFileExport();
 setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap);
+setupRouteSpotExcelLoad();
+setupRouteSpotExcelExport();
 setupClosureFileLoad();
 setupClosureFileExport();
 

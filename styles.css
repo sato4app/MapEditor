@@ -396,7 +396,9 @@ button:hover {
 }
 
 #exportBtn,
-#loadDbBtn {
+#loadDbBtn,
+#loadRouteSpotBtn,
+#exportRouteSpotBtn {
     width: 70%;
     margin: 0;
     padding: 8px 0;

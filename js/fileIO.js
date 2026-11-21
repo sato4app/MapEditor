@@ -3,8 +3,8 @@
 import { DEFAULTS, MODES, NON_CLOSURE_TYPES, CLOSURE_DEFAULT_KIND } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateTimeIso } from './stats.js';
-import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, importRouteNames, getRouteNames, state as routeEditorState } from './routeEditor.js';
-import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, toSpotNameHtml } from './spotEditor.js';
+import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, parseRouteId, normalizeId, isSameId, importRouteNames, getRouteNames, setRouteName, refreshRouteNameFields, state as routeEditorState } from './routeEditor.js';
+import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, toSpotNameHtml, setSpotEnglishName, selectedSpotFeature } from './spotEditor.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 import * as ClosureEditor from './closureEditor.js';
 
@@ -62,13 +62,14 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                 // データを初期化または取得
                 let data = initData();
 
-                // GeoJSON Featureに変換
+                // GeoJSON Featureに変換（英語名は値があるときのみ、名称の直後に置く）
                 const newFeatures = points.map(p => ({
                     type: "Feature",
                     properties: {
                         type: "ポイントGPS",
                         id: p.pointId,
                         name: p.name,
+                        ...(p.englishName ? { englishName: p.englishName } : {}),
                         pointId: p.pointId,
                         description: p.description
                     },
@@ -110,8 +111,7 @@ export function setupFileInput(map, geoJsonLayer, markerMap, spotMarkerMap) {
                     const lng = f.geometry.coordinates[0];
                     const style = DEFAULTS.FEATURE_STYLES['ポイントGPS'];
                     const marker = L.circleMarker([lat, lng], style);
-                    const popupContent = `${f.properties.id}<br>${f.properties.name}<br>(PointGPS)`;
-                    marker.bindPopup(popupContent);
+                    marker.bindPopup(pointGpsPopupHtml(f.properties));
                     geoJsonLayer.addLayer(marker);
                     if (id && markerMap) {
                         markerMap.set(id, marker);
@@ -158,6 +158,21 @@ function pointIdKey(feature) {
     if (!props) return '';
     const id = props.id ?? props.pointId;
     return id == null ? '' : String(id).trim();
+}
+
+// 値を前後の空白を除いた文字列にする（null・undefined は空文字）
+function toText(value) {
+    if (value === undefined || value === null) return '';
+    return String(value).trim();
+}
+
+// ポイントGPS のポップアップ（ID・名称・英語名のうち値のあるもの）
+function pointGpsPopupHtml(props) {
+    const lines = [props.id, props.name, props.englishName]
+        .map(toText)
+        .filter(text => text !== '')
+        .map(toSpotNameHtml);
+    return [...lines, '(PointGPS)'].join('<br>');
 }
 
 // 指定IDの type='point' をデータと地図から取り除く（同じIDのポイントGPSを優先するため）。
@@ -382,8 +397,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.circleMarker([lat, lng], style);
 
-                    const popupContent = `${props.id || ''}<br>${props.name || ''}<br>(PointGPS)`;
-                    marker.bindPopup(popupContent);
+                    marker.bindPopup(pointGpsPopupHtml(props));
 
                     geoJsonLayer.addLayer(marker);
 
@@ -845,17 +859,231 @@ export function setupFileExport() {
     });
 }
 
-// BlobをGeoJSONファイルとして保存（File System Access API、未対応時はダウンロードにフォールバック）
+// ========================================
+// ルート・スポット(Excel)の入出力
+// ルートの名称・英語名とスポットの英語名だけを扱い、位置情報は扱わない
+// ========================================
+
+// 編集対象のルートID（route_waypoint の route_id）。GeoJSON出力で route として書き出されるルートと同じ
+function getEditableRouteIds(data) {
+    const routeIds = new Set();
+    data.features.forEach(f => {
+        if (f.properties && f.properties.type === 'route_waypoint' && f.properties.route_id &&
+            f.geometry && f.geometry.type === 'Point') {
+            routeIds.add(f.properties.route_id);
+        }
+    });
+    return [...routeIds];
+}
+
+// スポット（type='spot' の Point）
+function getSpotFeatures(data) {
+    return data.features.filter(f =>
+        f.properties && f.properties.type === 'spot' && f.geometry && f.geometry.type === 'Point'
+    );
+}
+
+// スポット名称の照合用キー（改行とスペースの違いは無視）
+function spotNameKey(name) {
+    return normalizeId(toText(name));
+}
+
+// ルートの照合用キー（開始・終了IDの改行とスペースの違いは無視）。
+// reverse=true のときは開始と終了を入れ替えたキーを返す。ルートID形式でない場合は reverse 側は null
+function routeKey(routeId, reverse = false) {
+    const ids = parseRouteId(routeId);
+    if (!ids) return reverse ? null : normalizeId(routeId);
+    const [first, second] = reverse ? [ids.endId, ids.startId] : [ids.startId, ids.endId];
+    return `${normalizeId(first)}\n${normalizeId(second)}`;
+}
+
+// Excel の「ルート」シートの名称・英語名を読み込み中のルートに設定する（空欄は消去）。
+// 同じ向きの行を優先し、無ければ逆向き（route_B_to_A ↔ route_A_to_B）の行を使う
+function applyRouteNamesFromExcel(data, rows) {
+    const rowByKey = new Map();
+    rows.forEach(row => rowByKey.set(routeKey(row.routeId), row)); // 同じルートIDの行は後の行を優先
+
+    const usedKeys = new Set();
+    let appliedCount = 0;
+    getEditableRouteIds(data).forEach(routeId => {
+        let key = routeKey(routeId);
+        if (!rowByKey.has(key)) key = routeKey(routeId, true);
+        const row = key ? rowByKey.get(key) : undefined;
+        if (!row) return;
+
+        usedKeys.add(key);
+        setRouteName(routeId, 'name', row.name);
+        setRouteName(routeId, 'englishName', row.englishName);
+        appliedCount++;
+    });
+
+    const unmatched = [...rowByKey.entries()]
+        .filter(([key]) => !usedKeys.has(key))
+        .map(([, row]) => row.routeId);
+    return { appliedCount, unmatched };
+}
+
+// Excel の「スポット」シートの英語名を、名称が一致するすべてのスポットに設定する（空欄は消去）
+function applySpotEnglishNamesFromExcel(data, rows) {
+    const rowByName = new Map();
+    rows.forEach(row => rowByName.set(spotNameKey(row.name), row)); // 同じ名称の行は後の行を優先
+
+    const usedKeys = new Set();
+    let appliedCount = 0;
+    getSpotFeatures(data).forEach(feature => {
+        const key = spotNameKey(feature.properties.name);
+        const row = key ? rowByName.get(key) : undefined;
+        if (!row) return;
+
+        usedKeys.add(key);
+        setSpotEnglishName(feature, row.englishName);
+        appliedCount++;
+    });
+
+    const unmatched = [...rowByName.entries()]
+        .filter(([key]) => !usedKeys.has(key))
+        .map(([, row]) => row.name);
+    return { appliedCount, unmatched };
+}
+
+// ルート・スポット(Excel)の読み込み
+export function setupRouteSpotExcelLoad() {
+    document.getElementById('routeSpotExcelInput').addEventListener('change', async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+            const data = loadedDataInternal;
+            if (!data || (getEditableRouteIds(data).length === 0 && getSpotFeatures(data).length === 0)) {
+                showMessage('名称を設定するルート・スポットがありません。先にファイル(GeoJSON)を読み込んでください。', 'warning');
+                return;
+            }
+
+            const { loadRouteSpotExcel } = await import('./excelLoader.js');
+            const { routes, spots } = await loadRouteSpotExcel(file);
+
+            const routeResult = routes ? applyRouteNamesFromExcel(data, routes) : null;
+            const spotResult = spots ? applySpotEnglishNamesFromExcel(data, spots) : null;
+
+            // 選択中のルート・スポットの名称欄を更新
+            refreshRouteNameFields();
+            if (selectedSpotFeature) {
+                const props = selectedSpotFeature.properties || {};
+                document.getElementById('spotEnglishName').value = normalizeId(toText(props.englishName));
+            }
+
+            const applied = [];
+            if (routeResult) applied.push(`ルート${routeResult.appliedCount}件の名称・英語名`);
+            if (spotResult) applied.push(`スポット${spotResult.appliedCount}件の英語名`);
+            let msg = `${applied.join('、')}を設定しました`;
+
+            const unmatched = [];
+            if (routeResult && routeResult.unmatched.length > 0) {
+                unmatched.push(`ルート${routeResult.unmatched.length}件`);
+                console.warn('ルート・スポット(Excel): 該当するルートが無い行', routeResult.unmatched);
+            }
+            if (spotResult && spotResult.unmatched.length > 0) {
+                unmatched.push(`スポット${spotResult.unmatched.length}件`);
+                console.warn('ルート・スポット(Excel): 該当するスポットが無い行', spotResult.unmatched);
+            }
+            if (unmatched.length > 0) {
+                msg += `\n該当するデータが無い行: ${unmatched.join('・')}（一覧はコンソールに出力）`;
+            }
+            if (!routeResult) msg += '\n「ルート」シートが無いため、ルートは変更していません';
+            if (!spotResult) msg += '\n「スポット」シートが無いため、スポットは変更していません';
+
+            showMessage(msg, unmatched.length > 0 ? 'warning' : 'success');
+        } catch (error) {
+            console.error('Route/Spot Excel load error:', error);
+            showMessage(`読み込みエラー: ${error.message}`, 'error');
+        } finally {
+            // ファイル選択をリセット
+            this.value = '';
+        }
+    });
+}
+
+// ルート・スポット(Excel)の出力。
+// ルートは編集対象のルートすべて、スポットは名称ごとに1行（同じ名称のスポットには同じ英語名を与えるため）
+export function setupRouteSpotExcelExport() {
+    document.getElementById('exportRouteSpotBtn').addEventListener('click', async function () {
+        const data = loadedDataInternal;
+        const routeIds = data ? getEditableRouteIds(data) : [];
+        const spotFeatures = data ? getSpotFeatures(data) : [];
+        if (routeIds.length === 0 && spotFeatures.length === 0) {
+            showMessage('出力するルート・スポットがありません。先にデータを読み込んでください。', 'warning');
+            return;
+        }
+
+        const collator = new Intl.Collator('ja', { numeric: true });
+
+        const routes = routeIds
+            .sort(collator.compare)
+            .map(routeId => ({ routeId, ...getRouteNames(routeId) }));
+
+        // 同じ名称のスポットは1行にまとめ、最初に見つかった英語名を出力する
+        const spotRowByKey = new Map();
+        const englishNamesByKey = new Map(); // 英語名が食い違う同名スポットの検出用
+        spotFeatures.forEach(feature => {
+            const props = feature.properties;
+            const key = spotNameKey(props.name);
+            if (!key) return;
+
+            const englishName = toText(props.englishName);
+            const row = spotRowByKey.get(key);
+            if (!row) {
+                spotRowByKey.set(key, { name: toText(props.name), englishName });
+                englishNamesByKey.set(key, new Set());
+            } else if (!row.englishName) {
+                row.englishName = englishName;
+            }
+            if (englishName) englishNamesByKey.get(key).add(normalizeId(englishName));
+        });
+        const spots = [...spotRowByKey.values()].sort((a, b) => collator.compare(a.name, b.name));
+        const conflictNames = [...spotRowByKey.entries()]
+            .filter(([key]) => englishNamesByKey.get(key).size > 1)
+            .map(([, row]) => row.name);
+
+        try {
+            const { createRouteSpotExcelBlob } = await import('./excelLoader.js');
+            const blob = createRouteSpotExcelBlob(routes, spots);
+            const filename = `RouteSpot-${getDateString()}_R${routes.length}_S${spots.length}.xlsx`;
+
+            const saved = await saveBlobAsFile(blob, filename, EXCEL_FILE_TYPE);
+            if (!saved) return;
+
+            if (conflictNames.length > 0) {
+                console.warn('ルート・スポット(Excel): 英語名が異なる同名スポット', conflictNames);
+                showMessage(`ルート・スポット(Excel)を出力しました\n同じ名称で英語名が異なるスポットが${conflictNames.length}件あります（最初に見つかった英語名を出力。一覧はコンソールに出力）`, 'warning');
+            } else {
+                showMessage('ルート・スポット(Excel)を出力しました');
+            }
+        } catch (error) {
+            console.error('Route/Spot Excel export error:', error);
+            showMessage(`出力エラー: ${error.message}`, 'error');
+        }
+    });
+}
+
+// 保存ダイアログで選べるファイル種別
+const GEOJSON_FILE_TYPE = {
+    description: 'GeoJSON Files',
+    accept: { 'application/json': ['.geojson', '.json'] }
+};
+const EXCEL_FILE_TYPE = {
+    description: 'Excel Files',
+    accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+};
+
+// Blobをファイルとして保存（File System Access API、未対応時はダウンロードにフォールバック）
+// fileType: 保存ダイアログのファイル種別（既定は GeoJSON）
 // 戻り値: 保存した場合はtrue、ユーザーがキャンセルした場合はfalse
-async function saveBlobAsFile(blob, filename) {
+async function saveBlobAsFile(blob, filename, fileType = GEOJSON_FILE_TYPE) {
     if ('showSaveFilePicker' in window) {
         try {
             const handle = await window.showSaveFilePicker({
                 suggestedName: filename,
-                types: [{
-                    description: 'GeoJSON Files',
-                    accept: { 'application/json': ['.geojson', '.json'] }
-                }]
+                types: [fileType]
             });
             const writable = await handle.createWritable();
             await writable.write(blob);

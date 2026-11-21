@@ -21,6 +21,7 @@
                                           ・Excel(.xlsx)からの GPS ポイント取り込み
                                           ・複数 GeoJSON をまとめて読み込み
                                           ・地図上で編集（ポイント／ルート／スポット／エリア）
+                                          ・ルート・スポットの名称・英語名の設定（Excel での一括設定を含む）
                                           ・1つの統合 GeoJSON として出力
                                               │
                                               ▼
@@ -341,6 +342,7 @@ Excel(.xlsx) から読み込んだ GPS ポイントデータ。MapEditor 独自�
 | `type` | `"ポイントGPS"` | 固定、必須 |
 | `id` | String | ポイント ID（Excel の `pointId` 列と同値） |
 | `name` | String | ポイント名称 |
+| `englishName` | String | 英語名。Excel の英語名列に値がある場合のみ付与（`name` の直後） |
 | `pointId` | String | ポイント ID（`id` と同値） |
 | `description` | String | 備考（Excel に備考列がある場合） |
 
@@ -353,6 +355,7 @@ Excel(.xlsx) から読み込んだ GPS ポイントデータ。MapEditor 独自�
     "type": "ポイントGPS",
     "id": "G-51",
     "name": "登山口",
+    "englishName": "Trailhead",
     "pointId": "G-001",
     "description": "駐車場あり"
   },
@@ -371,6 +374,8 @@ Excel(.xlsx) から読み込んだ GPS ポイントデータ。MapEditor 独自�
 |-----------|--------|------|
 | `type` | `"route"` | 固定、必須 |
 | `id` | String | ルート ID。フォーマット: `route_{startPoint}_to_{endPoint}`。`startPoint` / `endPoint` と常に一致 |
+| `name` | String | ルートの名称。MapEditor で設定した場合のみ付与 |
+| `englishName` | String | ルートの英語名。MapEditor で設定した場合のみ付与 |
 | `startPoint` | String | 開始ポイント ID（**真の参照情報**） |
 | `endPoint` | String | 終了ポイント ID（**真の参照情報**） |
 | `startPointGPS` | `[lng, lat]` / `[lng, lat, elevation]` / `null` | 開始ポイントの GPS 座標。出力時点での `startPoint` 解決結果のスナップショット。解決失敗時は `null` または省略 |
@@ -400,6 +405,8 @@ Excel(.xlsx) から読み込んだ GPS ポイントデータ。MapEditor 独自�
   "properties": {
     "type": "route",
     "id": "route_A-01_to_A-05",
+    "name": "滝道",
+    "englishName": "Waterfall Path",
     "startPoint": "A-01",
     "endPoint": "A-05",
     "startPointGPS": [135.472041, 34.853667, 150.5],
@@ -424,7 +431,9 @@ Excel(.xlsx) から読み込んだ GPS ポイントデータ。MapEditor 独自�
 |-----------|--------|------|
 | `type` | `"spot"` | 固定、必須 |
 | `name` | String | スポット名称。MapEditor 上で新規作成した場合の初期値は `"仮{連番}"`（例: `"仮1"`、`"仮2"`、…） |
+| `englishName` | String | 英語名。MapEditor で設定した場合のみ付与（`name` の直後）。ルート・スポット(Excel)の読み込みでは、名称が一致するすべてのスポットに同じ英語名を設定する（[6.2 節](#62-ルートスポットexcel-読み込み出力)） |
 | `id` | String | スポット ID（入力ファイル由来。MapEditor 新規作成時は付与されない） |
+| `category` | String | スポット区分。MapEditor で区分を選んだ場合に付与（「選択してください」に戻すと空文字） |
 | `description` | String | 入力ファイル由来のプロパティを保持 |
 
 座標は `[経度, 緯度]` または `[経度, 緯度, 標高]`。
@@ -434,7 +443,8 @@ Excel(.xlsx) から読み込んだ GPS ポイントデータ。MapEditor 独自�
   "type": "Feature",
   "properties": {
     "type": "spot",
-    "name": "見晴台"
+    "name": "見晴台",
+    "englishName": "Observatory"
   },
   "geometry": {
     "type": "Point",
@@ -610,19 +620,39 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 4. **`type: "route"` LineString の自動展開**: `id` が `route_{X}_to_{Y}` パターンに一致するルートは、内部編集用に `route_waypoint` Point Feature へ自動展開されます。各座標が順番に `waypoint_number` 1, 2, 3, … として登録されます。
 5. **編集対象としての登録**: `route_waypoint` Point は `route_id` ごとにグループ化し `waypoint_number` 順に並べて編集対象として登録します。
 6. **closure の除外**: `type: "closure"` の Point Feature は取り込みません（登録地点パネルの専用読み込みで扱います）。
+7. **ルートの名称・英語名の取り込み**: `type: "route"` LineString の `name` / `englishName` を、そのルートの名称・英語名として取り込みます。GeoReferencer が付ける表示名（`{startPoint} ～ {endPoint}`、[3.2.2 節](#322-ルートtype-route)）は名称として扱いません。既に値がある項目は上書きしません（先に読み込んだ値・画面で編集した値を優先）。
 
 ### 6.1 Excel(.xlsx) 読み込み
 
-`.xlsx` ファイルを選択した場合は、各行を `type: "ポイントGPS"` の Feature に変換して取り込みます。同一 `id` の既存ポイントGPS が存在する場合は Excel の内容で上書きされます。
+`.xlsx` ファイルを選択した場合は、各行を `type: "ポイントGPS"` の Feature に変換して取り込みます。同一 `id` の既存ポイントGPS が存在する場合は Excel の内容で上書きされます（英語名も Excel の値に置き換わります）。
 
 | Excel 列 | GeoJSON プロパティ |
 |----------|------------------|
 | ポイントID | `id`、`pointId` |
 | 名称 | `name` |
+| 英語名（列は必須・値は任意） | `englishName`（値がある場合のみ） |
 | 緯度 | `coordinates[1]` |
 | 経度 | `coordinates[0]` |
 | 標高（任意） | `coordinates[2]` |
 | 備考（任意） | `description` |
+
+英語名の列が無いファイルは読み込みを中止します（読み込み済みのデータは変更しません）。
+
+### 6.2 ルート・スポット(Excel) 読み込み・出力
+
+ルートの名称・英語名と、スポットの英語名を一括で設定するための `.xlsx` ファイルです。位置情報は扱いません。読み込みと出力は同じ形式で、出力したファイルを編集してそのまま読み込めます。
+
+| シート | 列（すべて必須） | 照合キー | 設定先 |
+|-------|----------------|---------|-------|
+| `ルート` | ルートID・名称・英語名 | ルートID | ルートの `name` / `englishName` |
+| `スポット` | 名称・英語名 | 名称 | 名称が一致するすべてのスポットの `englishName` |
+
+- **ルートの照合**: ルートIDの開始・終了が一致する行を優先し、無ければ開始と終了を入れ替えた行を使います（`route_A-05_to_A-01` には `route_A-01_to_A-05` の行を使う）。
+- **値の扱い**: 既存の値は上書きします。セルが空の場合は名称・英語名を消去します。
+- **照合時の表記ゆれ**: ルートIDの開始・終了 ID、スポットの名称とも、改行とスペースの違いは無視します。
+- **出力ファイル名**: `RouteSpot-{YYYYMMDD}_R{ルート数}_S{スポット数}.xlsx`。スポットは名称ごとに 1 行にまとめて出力します。
+
+読み込み時の中止条件や出力時の並び順などの振る舞いは、機能仕様書を参照してください。
 
 ---
 
@@ -635,6 +665,7 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 3. 除外した `route_waypoint` Point を `route_id` でグループ化し、`waypoint_number` 昇順に並べて LineString へ集約する。
 4. 集約された LineString を `type: "route"` Feature として追加する。プロパティは以下の通り付与する：
    - `type` / `id` を付与（`id` は `route_{startPoint}_to_{endPoint}` 形式）
+   - `name` / `englishName`（ルートの名称・英語名）を、値があるときのみ付与
    - `startPoint` / `endPoint`（ID）を `id`（routeId）から抽出して付与
    - `startPointGPS` / `endPointGPS`（座標）を、`startPoint` / `endPoint` の ID から [4.2.3 ID 解決順序](#423-ルートtype-route) に従って引き直した現在座標で付与（解決失敗時は `null` または省略）
 5. その他の Feature（`point`、`ポイントGPS`、`spot`、`area`）はそのまま保持する。
@@ -646,7 +677,7 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 ## 8. 補足
 
 - **`source` / `description` フィールド**: 入力 GeoJSON に含まれていれば保持して再出力されますが、MapEditor が新規生成するルート（`route`）、スポット（`spot`）、エリア（`area`）の Feature には付与されません。
-- **`name` フィールド**: ルート（`route`）Feature にはエクスポート時に付与されません（`startPoint` / `endPoint` で識別）。
+- **`name` / `englishName` フィールド（ルート）**: ルート（`route`）Feature には、MapEditor で設定した名称・英語名を値があるときのみ付与します（ルートの識別は `startPoint` / `endPoint` で行います）。GeoReferencer が付ける表示名（`{startPoint} ～ {endPoint}`）は名称として取り込まないため、出力されません。
 - **ポイントGPS** は MapEditor 独自の中間種別であり、GeoReferencer 標準仕様には含まれません。Excel 読み込み機能の入力データとして使用されます。
 - **通行禁止・通行困難地点** は統合 GeoJSON に混在させないでください。混在したファイルを統合 GeoJSON として読み込んだ場合、closure Feature は取り込まれずに失われます（元ファイルは変更されません）。
 
@@ -654,18 +685,19 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 
 - 入力 JSON 仕様: `dataspec-json-202604.md`
 - Firebase DB 仕様: `firebase-dbspec-202512.md`
-- 機能仕様: [funcspec-202608.md](funcspec-202608.md)
-- 利用者の手引: [UsersGuide-202608.md](UsersGuide-202608.md)
+- 機能仕様: [funcspec-202611.md](funcspec-202611.md)
+- 利用者の手引: [UsersGuide-202611.md](UsersGuide-202611.md)
 - 公開API・公開スキーマ（正本）: minoh-hiking `docs/publish-api-202608.md`
 - 公開ツール: MapPublisher `docs/funcspec-202608.md` / `docs/dataspec-202608.md`
-- 前バージョン: `dataspec-geojson-202607.md`
+- 前バージョン: `dataspec-geojson-202608.md`
 
 ---
 
 **作成日**: 2026 年 8 月 17 日
-**バージョン**: 2.10（解除予定日を追加）
+**バージョン**: 2.11（英語名を追加）
 
 **変更履歴**:
+- v2.11 (2026-11-21): 英語名 `englishName` を追加。ポイントGPS（Excel の英語名列から）・ルート・スポットに、値があるときのみ付与（ポイントGPS・スポットは `name` の直後）。ルート Feature に名称 `name` を付与するよう変更し、[8 章](#8-補足)の「ルートに `name` は付与されない」を改めた。読み込み時のルート名称・英語名の取り込み（[6 章](#6-mapeditor-の読み込み処理仕様ファイル単位の振る舞い) 7.）、ポイントGPS(Excel) の英語名列（列必須・値任意）、ルート・スポット(Excel) の形式（[6.2 節](#62-ルートスポットexcel-読み込み出力)）を追記。スポットの `category`（スポット区分）を表に追記。
 - v2.10 (2026-09-25): 通行禁止・通行困難地点の Feature に `reopenDate`（解除予定日・`YYYY-MM-DD`・任意）を追加し、出力順を `relatedRoute` の後・`updatedAt` の前とした。MapPublisher がそのまま公開する（公開API 契約 3.1）。
 - v2.9 (2026-08-20): 公開との関係（[1.2 節](#12-公開との関係mappublisher)）を追加。MapEditor の出力は作業用ファイルであり、公開時に MapPublisher が公開スキーマへ整形すること、その際に落とされるプロパティと公開されない type を明記。**MapEditor 側の出力形式は変更なし**。
 - v2.8 (2026-08-17): 通行禁止・通行困難地点の `kind` から `"unknown"`（未選択）を廃止し、`"closed"` / `"difficult"` の 2 値に変更。新規登録時の既定値（`kind`: `"closed"`、`reason`: `"工事"`）と、読み込み時に不正な `kind` を `"closed"` へ正規化する仕様を追記。
