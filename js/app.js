@@ -16,6 +16,9 @@ const { map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap } = initialize
 // グローバルアクセス用（最適化関数で使用）
 window.geoJsonLayer = geoJsonLayer;
 
+// ルート編集の初期化（ルートのポップアップを開く地図を設定）
+RouteEditor.initRouteEditor(map);
+
 // 登録地点（通行止め・通行困難地点）の初期化
 ClosureEditor.initClosureEditor(map, geoJsonLayer);
 

@@ -3,7 +3,7 @@
 import { DEFAULTS, MODES, NON_CLOSURE_TYPES, CLOSURE_DEFAULT_KIND } from './constants.js';
 import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateTimeIso } from './stats.js';
-import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, bindRouteLinePopup, parseRouteId, normalizeId, isSameId, importRouteNames, getRouteNames, setRouteName, refreshRouteNameFields, state as routeEditorState } from './routeEditor.js';
+import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, bindRoutePopup, parseRouteId, normalizeId, isSameId, importRouteNames, getRouteNames, setRouteName, refreshRouteNameFields, state as routeEditorState } from './routeEditor.js';
 import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, bindSpotPopup, setSpotEnglishName, selectedSpotFeature } from './spotEditor.js';
 import { popupHtml } from './popup.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
@@ -419,7 +419,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                     if (isEditableRoute) {
                         // 編集用ルート: ポリラインで参考表示（変換処理でポイントGPS/route_waypointマーカーを別途作成）
                         const line = L.polyline(latLngs, { color: '#f58220', weight: 2, opacity: 0.6 });
-                        bindRouteLinePopup(line, routeId, map);
+                        bindRoutePopup(line, routeId);
                         geoJsonLayer.addLayer(line);
                         // 背景ポリラインを routeLineMap に登録（waypoint削除時に再描画できるよう）
                         routeEditorState.routeLineMap.set(routeId, line);
@@ -566,6 +566,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                             iconAnchor: [style.radius, style.radius]
                         })
                     });
+                    bindRoutePopup(marker, routeId);
                     geoJsonLayer.addLayer(marker);
                     markers.push(marker);
                 });
@@ -623,6 +624,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
                             iconAnchor: [wpStyle.radius, wpStyle.radius]
                         })
                     });
+                    bindRoutePopup(marker, routeId);
                     geoJsonLayer.addLayer(marker);
                     waypointMarkers.push(marker);
                 });
@@ -638,7 +640,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
             // ルート編集ドロップダウンを更新（GeoJSON読み込み後に選択可能にする）
             extractPointsAndRoutes(data);
             updateDropdowns(data);
-            initAllRouteLines(data, geoJsonLayer, map);
+            initAllRouteLines(data, geoJsonLayer);
 
             // スポット編集ドロップダウンを更新
             extractSpots(data);

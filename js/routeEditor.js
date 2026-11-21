@@ -452,26 +452,41 @@ export function getCoordinatesFromGeoJSON(routeId, loadedData) {
     return null;
 }
 
-// 背景ポリラインのクリックで、ルートのポップアップ（ルートID・名称・英語名）を開く。
+// ========================================
+// ルートのポップアップ
+// ========================================
+
+// ルートのポップアップを開く地図（initRouteEditor で設定）
+let popupMap = null;
+
+// ルート編集の初期化（アプリ起動時に1回呼ぶ）
+export function initRouteEditor(map) {
+    popupMap = map;
+}
+
+// ルートのポップアップ（ルートID・名称・英語名のうち値のあるもの）を開く。
 // 内容は開くたびに作るため、名称・英語名を変更すると次に開いたときに反映される。
-// minoh-hiking と同じく bindPopup は使わず、クリック時に開く。地図クリックで中間点・スポット・
-// エリアの頂点・登録地点を追加する編集中は、各モードが地図に click を登録している。その間は開かず、
-// クリックを地図へ通す（bindPopup の既定動作では地図の click が止まり、線の上で追加できなくなるため）
-export function bindRouteLinePopup(line, routeId, map) {
-    line.on('click', function (e) {
-        if (map.listens('click')) return;
-        // 地図の click（開いたポップアップを閉じる処理）へ伝えない。bindPopup の既定動作と同じ
-        L.DomEvent.stop(e);
-        const names = getRouteNames(routeId);
-        L.popup()
-            .setLatLng(e.latlng)
-            .setContent(popupHtml([routeId, names.name, names.englishName], '(Route)'))
-            .openOn(map);
-    });
+// 地図クリックで中間点・スポット・エリアの頂点・登録地点を追加している間（各モードが地図に click を
+// 登録している間）と、中間点の削除中は開かない。追加中はクリックを地図へ通す（止めると線の上で追加できなくなるため）
+function openRoutePopup(e, routeId) {
+    if (!popupMap || popupMap.listens('click') || state.isDeleteMode) return;
+    // 地図の click（開いたポップアップを閉じる処理）へ伝えない。bindPopup の既定動作と同じ
+    L.DomEvent.stop(e);
+    const names = getRouteNames(routeId);
+    L.popup()
+        .setLatLng(e.latlng)
+        .setContent(popupHtml([routeId, names.name, names.englishName], '(Route)'))
+        .openOn(popupMap);
+}
+
+// ルート線（背景ポリライン）・中間点マーカーのクリックで、ルートのポップアップを開くようにする。
+// minoh-hiking と同じく bindPopup は使わない（既定動作では編集中かどうかに関係なく開き、地図の click も止まるため）
+export function bindRoutePopup(layer, routeId) {
+    layer.on('click', e => openRoutePopup(e, routeId));
 }
 
 // 全ルートの背景ポリラインを初期化（選択状態によらず常に表示）
-export function initAllRouteLines(loadedData, geoJsonLayer, map) {
+export function initAllRouteLines(loadedData, geoJsonLayer) {
     state.allRoutes.forEach(({ routeId }) => {
         const coordinates = getCoordinatesFromGeoJSON(routeId, loadedData);
         if (coordinates && coordinates.length >= 2) {
@@ -479,7 +494,7 @@ export function initAllRouteLines(loadedData, geoJsonLayer, map) {
                 state.routeLineMap.get(routeId).setLatLngs(coordinates);
             } else {
                 const line = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
-                bindRouteLinePopup(line, routeId, map);
+                bindRoutePopup(line, routeId);
                 geoJsonLayer.addLayer(line);
                 state.routeLineMap.set(routeId, line);
             }
@@ -646,6 +661,7 @@ export function addWaypointToRoute(routeId, latlng, loadedData, markerMap, geoJs
             iconAnchor: [style.radius, style.radius]
         })
     }).addTo(geoJsonLayer);
+    bindRoutePopup(marker, routeId);
 
     if (!markerMap.has(routeId)) {
         markerMap.set(routeId, []);
@@ -680,7 +696,7 @@ export function redrawRouteLine(routeId, loadedData, map) {
 
         if (window.geoJsonLayer) {
             const newBgLine = L.polyline(coordinates, { color: '#f58220', weight: 2, opacity: 0.7 });
-            bindRouteLinePopup(newBgLine, routeId, map);
+            bindRoutePopup(newBgLine, routeId);
             window.geoJsonLayer.addLayer(newBgLine);
             state.routeLineMap.set(routeId, newBgLine);
         }
@@ -734,6 +750,7 @@ export function redrawWaypointMarkers(routeId, loadedData, markerMap, geoJsonLay
             }).addTo(geoJsonLayer);
             // 追加・移動モード以外ではドラッグを無効化
             if (marker.dragging) marker.dragging.disable();
+            bindRoutePopup(marker, routeId);
 
             newMarkers.push(marker);
         }
@@ -1021,7 +1038,7 @@ export function makeWaypointsClickableForAddMove(routeId, loadedData, markerMap,
     waypointMarkers.forEach((marker, index) => {
         marker.off('drag');
         marker.off('dragend');
-        marker.off('click');
+        removeWaypointDeleteHandler(marker);
 
         if (marker.dragging) marker.dragging.enable();
 
@@ -1046,6 +1063,17 @@ export function makeWaypointsClickableForAddMove(routeId, loadedData, markerMap,
     });
 }
 
+// 削除モードで中間点マーカーに付けた click ハンドラ（marker -> handler）。
+// 解除時はこれだけを外し、ルートのポップアップを開く click は残す
+const waypointDeleteHandlers = new WeakMap();
+
+function removeWaypointDeleteHandler(marker) {
+    const handler = waypointDeleteHandlers.get(marker);
+    if (!handler) return;
+    marker.off('click', handler);
+    waypointDeleteHandlers.delete(marker);
+}
+
 // 中間点をクリック可能にする（削除モード用）
 export function makeWaypointsClickable(routeId, loadedData, markerMap, map) {
     const waypointMarkers = markerMap.get(routeId);
@@ -1057,12 +1085,15 @@ export function makeWaypointsClickable(routeId, loadedData, markerMap, map) {
             if (element) {
                 element.style.cursor = 'pointer';
 
-                marker.on('click', function(e) {
+                removeWaypointDeleteHandler(marker);
+                const handler = function(e) {
                     if (!state.isDeleteMode) return;
 
                     L.DomEvent.stopPropagation(e);
                     deleteWaypoint(routeId, marker, loadedData, markerMap, map);
-                });
+                };
+                waypointDeleteHandlers.set(marker, handler);
+                marker.on('click', handler);
             }
         }
     });
@@ -1095,7 +1126,7 @@ export function exitAddMoveMode(markerMap, map) {
                 if (element) {
                     element.style.cursor = '';
                 }
-                marker.off('click');
+                removeWaypointDeleteHandler(marker);
             });
         }
     }
@@ -1121,7 +1152,7 @@ export function exitDeleteMode(markerMap) {
                 if (element) {
                     element.style.cursor = '';
                 }
-                marker.off('click');
+                removeWaypointDeleteHandler(marker);
             });
         }
     }
