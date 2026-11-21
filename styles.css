@@ -273,15 +273,15 @@ button:hover {
     border-color: #0066cc;
 }
 
-/* ルートの名称・英語名 */
+/* ルートの名称・英語名（中間点・ルートのボタンと同じ枠内に配置） */
 .route-names {
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .route-name {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 12px;
     margin-bottom: 12px;
 }
 
@@ -289,7 +289,7 @@ button:hover {
     margin-bottom: 0;
 }
 
-/* 「ルート」ドロップダウンと入力欄の左端をそろえるため、ラベル幅を3文字分に固定 */
+/* 「中間点」「ルート」のボタンと入力欄の左端をそろえるため、ラベル幅を3文字分に固定 */
 .route-name .route-label {
     width: 3em;
     flex-shrink: 0;
