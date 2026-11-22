@@ -7,6 +7,7 @@ import {
     CLOSURE_DEFAULT_KIND, CLOSURE_DEFAULT_REASON
 } from './constants.js';
 import { showMessage } from './message.js';
+import { escapeHtml } from './popup.js';
 import { getDateIso } from './stats.js';
 import { fetchElevation } from './elevation.js';
 
@@ -89,16 +90,6 @@ export function addLoadedClosure(feature) {
 }
 
 // ===== マーカーの描画 =====
-
-// ポップアップに地点名・備考を埋め込む際のHTMLエスケープ
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
 
 // 通行止め（🚷 風）の形状（s×s の領域に描く）。minoh-hiking と同じ描き方
 // ISO 7010 P004「No thoroughfare」・道路標識「歩行者通行止め」風。白地に色の輪と斜線、

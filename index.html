@@ -346,6 +346,27 @@
         </div>
     </div>
 
+    <!-- 登録地点0件（全解除用）の出力確認。初期フォーカスはキャンセルに置く -->
+    <dialog id="closureEmptyExportDialog" class="modal-box modal-dialog" aria-labelledby="closureEmptyExportTitle">
+        <form method="dialog">
+            <div class="modal-title" id="closureEmptyExportTitle">登録地点が0件です</div>
+            <p class="modal-text">
+                全解除用のファイルを出力します。<br>
+                MapPublisher で公開すると、<strong>公開中の通行止め・通行困難地点がすべて消えます。</strong>
+            </p>
+            <p class="modal-text">
+                一部だけを解除する場合はキャンセルし、前回のファイルを読み込んでから、解除する地点を削除してください。
+            </p>
+            <p class="modal-text">
+                保存時にファイル名の先頭「Closure-」は変えないでください（MapPublisher で読み込めなくなります）。
+            </p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-danger" value="export">0件で出力</button>
+                <button class="modal-btn" value="cancel" autofocus>キャンセル</button>
+            </div>
+        </form>
+    </dialog>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script type="module" src="js/app.js"></script>

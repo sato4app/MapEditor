@@ -9,6 +9,7 @@ import * as RouteEditor from './routeEditor.js';
 import * as SpotEditor from './spotEditor.js';
 import * as AreaEditor from './areaEditor.js';
 import * as ClosureEditor from './closureEditor.js';
+import { escapeHtml } from './popup.js';
 
 // 地図とレイヤーの初期化
 const { map, geoJsonLayer, markerMap, spotMarkerMap, areaLayerMap } = initializeMap();
@@ -781,7 +782,7 @@ if (areaNameInput) {
 
         // 選択中レイヤーのポップアップとラベルも更新
         if (AreaEditor.selectedAreaLayer) {
-            AreaEditor.selectedAreaLayer.bindPopup(`<b>${newName}</b>`);
+            AreaEditor.selectedAreaLayer.bindPopup(`<b>${escapeHtml(newName)}</b>`);
             AreaEditor.bindAreaLabel(AreaEditor.selectedAreaFeature, AreaEditor.selectedAreaLayer);
         }
 

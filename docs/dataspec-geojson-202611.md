@@ -507,7 +507,7 @@ MapEditor の「登録地点」パネルが読み書きする専用ファイル�
 Closure-{YYYYMMDD}_C{通行止め件数}_D{通行困難件数}.geojson
 ```
 
-**例**: `Closure-20260817_C3_D2.geojson`
+**例**: `Closure-20260817_C3_D2.geojson`、`Closure-20261122_C0_D0.geojson`（0 件＝全解除用）
 
 - `C`: 区分が `closed`（通行止め）の件数
 - `D`: 区分が `difficult`（通行困難）の件数
@@ -529,7 +529,7 @@ Closure-{YYYYMMDD}_C{通行止め件数}_D{通行困難件数}.geojson
 | `type` | `"FeatureCollection"` | ○ | 固定 |
 | `version` | String | | 公開用のデータバージョン。MapEditor には編集欄がなく、**読み込んだファイルに値があった場合のみ引き継いで出力**します |
 | `updatedAt` | String (ISO 8601) | ○ | ファイル出力日時。タイムゾーンオフセット付き |
-| `features` | Array | ○ | closure Feature の配列 |
+| `features` | Array | ○ | closure Feature の配列。**全解除用では空配列**（MapPublisher で公開すると全地点が解除される） |
 
 ### 5.3 Feature 仕様
 
@@ -688,15 +688,16 @@ GeoJSON 読み込み時、MapEditor はファイルレベルで次の処理を�
 - 機能仕様: [funcspec-202611.md](funcspec-202611.md)
 - 利用者の手引: [UsersGuide-202611.md](UsersGuide-202611.md)
 - 公開API・公開スキーマ（正本）: minoh-hiking `docs/publish-api-202608.md`
-- 公開ツール: MapPublisher `docs/funcspec-202608.md` / `docs/dataspec-202608.md`
+- 公開ツール: MapPublisher `docs/funcspec-202611.md` / `docs/dataspec-202611.md`
 - 前バージョン: `dataspec-geojson-202608.md`
 
 ---
 
 **作成日**: 2026 年 8 月 17 日
-**バージョン**: 2.11（英語名を追加）
+**バージョン**: 2.12（登録地点 0 件のファイルを追加）
 
 **変更履歴**:
+- v2.12 (2026-11-22): 通行禁止・通行困難地点ファイルに 0 件（`features` が空配列。全解除用）を追加（[5 章](#5-通行禁止通行困難地点ファイル仕様mapeditor-専用入出力)）。MapPublisher の文書の参照先を 202611 版に更新。
 - v2.11 (2026-11-21): 英語名 `englishName` を追加。ポイントGPS（Excel の英語名列から）・ルート・スポットに、値があるときのみ付与（ポイントGPS・スポットは `name` の直後）。ルート Feature に名称 `name` を付与するよう変更し、[8 章](#8-補足)の「ルートに `name` は付与されない」を改めた。読み込み時のルート名称・英語名の取り込み（[6 章](#6-mapeditor-の読み込み処理仕様ファイル単位の振る舞い) 7.）、ポイントGPS(Excel) の英語名列（列必須・値任意）、ルート・スポット(Excel) の形式（[6.2 節](#62-ルートスポットexcel-読み込み出力)）を追記。スポットの `category`（スポット区分）を表に追記。
 - v2.10 (2026-09-25): 通行禁止・通行困難地点の Feature に `reopenDate`（解除予定日・`YYYY-MM-DD`・任意）を追加し、出力順を `relatedRoute` の後・`updatedAt` の前とした。MapPublisher がそのまま公開する（公開API 契約 3.1）。
 - v2.9 (2026-08-20): 公開との関係（[1.2 節](#12-公開との関係mappublisher)）を追加。MapEditor の出力は作業用ファイルであり、公開時に MapPublisher が公開スキーマへ整形すること、その際に落とされるプロパティと公開されない type を明記。**MapEditor 側の出力形式は変更なし**。

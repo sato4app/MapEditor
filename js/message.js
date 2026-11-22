@@ -11,8 +11,11 @@ export function showMessage(message, type = 'success') {
     // メッセージ要素を作成
     const msgDiv = document.createElement('div');
     msgDiv.className = `toast-message ${type}`;
-    // \nを<br>に変換して改行を有効化
-    msgDiv.innerHTML = message.replace(/\n/g, '<br>');
+    // ファイル名やファイル内の値を含むため HTML として解釈しない。改行(\n)だけを <br> にする
+    message.split('\n').forEach((line, i) => {
+        if (i > 0) msgDiv.appendChild(document.createElement('br'));
+        msgDiv.appendChild(document.createTextNode(line));
+    });
     document.body.appendChild(msgDiv);
 
     // タイプによって表示時間を変更

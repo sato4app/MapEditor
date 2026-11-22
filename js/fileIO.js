@@ -5,7 +5,7 @@ import { showMessage } from './message.js';
 import { updateStats, getDateString, getDateTimeIso } from './stats.js';
 import { extractPointsAndRoutes, updateDropdowns, initAllRouteLines, bindRoutePopup, parseRouteId, normalizeId, isSameId, importRouteNames, getRouteNames, setRouteName, refreshRouteNameFields, state as routeEditorState } from './routeEditor.js';
 import { extractSpots, updateSpotDropdown, highlightSpot, allSpots, isExtractDuplicateMode, isAddMoveSpotMode, makeSpotDraggable, bindSpotPopup, setSpotEnglishName, selectedSpotFeature } from './spotEditor.js';
-import { popupHtml } from './popup.js';
+import { popupHtml, escapeHtml } from './popup.js';
 import { extractAreas, updateAreaDropdown, highlightArea, allAreas, bindAreaLabel } from './areaEditor.js';
 import * as ClosureEditor from './closureEditor.js';
 
@@ -379,7 +379,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                     const marker = L.circleMarker([lat, lng], style);
 
-                    marker.bindPopup(`${props.id || props.pointId || ''}<br>(Point)`);
+                    marker.bindPopup(`${escapeHtml(props.id || props.pointId || '')}<br>(Point)`);
 
                     geoJsonLayer.addLayer(marker);
                     pointMarkerMap.set(f, marker);
@@ -506,7 +506,7 @@ export function setupGeoJsonLoad(map, geoJsonLayer, markerMap, spotMarkerMap, ar
 
                         const polygon = L.polygon(latLngs, polygonStyle);
 
-                        polygon.bindPopup(`<b>${props.name || 'エリア'}</b>`);
+                        polygon.bindPopup(`<b>${escapeHtml(props.name || 'エリア')}</b>`);
 
                         // エリアモードでクリックしたときにドロップダウンと連動
                         polygon.on('click', function(e) {
@@ -1247,15 +1247,25 @@ function buildClosureExportFeature(feature) {
     };
 }
 
-// 登録地点のファイル出力
+// 0件（全解除用）で出力してよいか確認する。
+// confirm() は使わない。閉じるまでに5秒を超えるとユーザー操作とみなされず、保存先のダイアログを開けないため。
+// ダイアログ内のボタンを押した直後に保存処理へ進めば、読むのに時間がかかっても開ける
+function confirmEmptyClosureExport() {
+    const dialog = document.getElementById('closureEmptyExportDialog');
+    dialog.returnValue = ''; // Esc で閉じたときに前回の選択が残らないように
+
+    return new Promise(resolve => {
+        dialog.addEventListener('close', () => resolve(dialog.returnValue === 'export'), { once: true });
+        dialog.showModal();
+    });
+}
+
+// 登録地点のファイル出力（0件は全解除用として、確認のうえで出力する）
 // 出力ファイル名: Closure-yyyymmdd_Cx_Dy.geojson（C=通行止め件数 / D=通行困難件数）
 export function setupClosureFileExport() {
     document.getElementById('exportClosureBtn').addEventListener('click', async function () {
         const counts = ClosureEditor.getClosureCounts();
-        if (counts.total === 0) {
-            showMessage('出力する登録地点がありません。', 'warning');
-            return;
-        }
+        if (counts.total === 0 && !(await confirmEmptyClosureExport())) return;
 
         // 公開用のversionは本アプリでは編集しないが、読み込んだ値があれば引き継いで出力する
         const exportData = {
@@ -1271,7 +1281,7 @@ export function setupClosureFileExport() {
 
         const saved = await saveBlobAsFile(blob, filename);
         if (saved) {
-            showMessage('登録地点を出力しました', 'success');
+            showMessage(counts.total === 0 ? '全解除用のファイル（0件）を出力しました' : '登録地点を出力しました', 'success');
         }
     });
 }

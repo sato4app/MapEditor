@@ -2,6 +2,7 @@
 
 import { DEFAULTS, MODES } from './constants.js';
 import { showMessage } from './message.js';
+import { escapeHtml } from './popup.js';
 import { updateStats } from './stats.js';
 
 // エリア編集の状態管理
@@ -121,7 +122,7 @@ function formatAreaLabelContent(feature) {
     const name = (feature.properties && feature.properties.name) || 'エリア';
     const areaSqM = calculatePolygonAreaSqM(feature);
     const rounded = toSignificantFigures(areaSqM, 3);
-    return `${name}<br><span style="font-size:10px">（約${rounded.toLocaleString()}㎡）</span>`;
+    return `${escapeHtml(name)}<br><span style="font-size:10px">（約${rounded.toLocaleString()}㎡）</span>`;
 }
 
 // エリア中央にラベルを表示（永続トゥールチップ）
